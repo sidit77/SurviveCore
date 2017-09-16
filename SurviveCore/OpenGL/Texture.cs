@@ -103,10 +103,11 @@ namespace Survive.OpenGL {
                 int levels = (int)Math.Round(Math.Log(Math.Min(img.Width, img.Height), 2));
                 Texture t = new Texture(TextureTarget.Texture2D, levels, SizedInternalFormat.Rgba8, img.Width, img.Height);
                 
+                
 
-                using (var imgdata = img.Lock()) {
-                    t.SetSubImage(0, 0, 0, img.Width, img.Height, OpenTK.Graphics.OpenGL4.PixelFormat.Bgra, PixelType.UnsignedByte, imgdata.PixelArray);
-                }
+                //using (var imgdata = img.Lock()) {
+                    t.SetSubImage(0, 0, 0, img.Width, img.Height, OpenTK.Graphics.OpenGL4.PixelFormat.Bgra, PixelType.UnsignedByte, img.Pixels.AsBytes().ToArray());
+                //}
 
                 t.SetFiltering(TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
                 t.GenerateMipmap();
@@ -123,9 +124,9 @@ namespace Survive.OpenGL {
             for(int i = 0; i < paths.Length; i++) {
                 using(FileStream stream = File.OpenRead(paths[i]))
                 using(Image<Rgba32> img = Image.Load(stream))
-                using(var imgdata = img.Lock()) {
-                    t.SetSubImage(0, 0, 0, i, img.Width, img.Height, 1, PixelFormat.Rgba, PixelType.UnsignedByte, imgdata.PixelArray);
-                }
+                //using(var imgdata = img.Lock()) {
+                    t.SetSubImage(0, 0, 0, i, img.Width, img.Height, 1, PixelFormat.Rgba, PixelType.UnsignedByte, img.Pixels.AsBytes().ToArray());
+                //}
             }
         
             t.SetFiltering(TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
