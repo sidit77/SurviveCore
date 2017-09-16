@@ -63,6 +63,11 @@ namespace Survive {
                     VSync = VSync == OpenTK.VSyncMode.Adaptive ? OpenTK.VSyncMode.Off : OpenTK.VSyncMode.Adaptive;
                     Console.WriteLine(VSync);
                 }
+                if (!ea.IsRepeat && ea.Key == Key.F11)
+                {
+                    WindowState = WindowState == OpenTK.WindowState.Fullscreen ? OpenTK.WindowState.Normal : OpenTK.WindowState.Fullscreen;
+                    Console.WriteLine(WindowState);
+                }
                 if (!ea.IsRepeat && ea.Key == Key.Space) {
                     velocity += 1;
                 }
