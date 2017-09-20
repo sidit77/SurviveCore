@@ -6,12 +6,12 @@ namespace Survive.World {
 
     static class Blocks {
         public readonly static Block Air = new AirBlock();
-        public readonly static Block Stone = new Block("Stone", 1);
-        public readonly static Block Grass = new Block("Grass", 3).SetTexture(1, 4).SetTexture(4, 2);
-        public readonly static Block Bricks = new Block("Bricks", 0);
+        public readonly static Block Stone = new Block("Stone", "./Assets/Textures/Stone.png");
+        public readonly static Block Grass = new Block("Grass", "./Assets/Textures/Grass_Side.png").SetTexture(1, "./Assets/Textures/Grass_Top.png").SetTexture(4, "./Assets/Textures/Dirt.png");
+        public readonly static Block Bricks = new Block("Bricks", "./Assets/Textures/Bricks.png");
 
         private class AirBlock : Block {
-            public AirBlock() : base("Air", -1) {
+            public AirBlock() : base("Air") {
             }
             public override bool IsUnrendered {
                 get {
@@ -25,17 +25,35 @@ namespace Survive.World {
     }
 
     class Block {
+        
+        private static List<string> textures = new List<string>();
+        private static int GetTextureID(string path) {
+            if (!textures.Contains(path))
+                textures.Add(path);
+            return textures.IndexOf(path);
+        }
+        public static string[] Textures {
+            get {
+                return textures.ToArray();
+            }
+        }
 
         private string name;
         private int[] textureids;
 
-        public Block(string name, int texid) {
+        public Block(string name) {
             this.name = name;
+            this.textureids = new int[] { -1, -1, -1, -1, -1, -1 };
+        }
+
+        public Block(string name, string texture) {
+            this.name = name;
+            int texid = GetTextureID(texture);
             this.textureids = new int[] {texid, texid, texid, texid, texid, texid };
         }
 
-        public virtual Block SetTexture(int side, int id) {
-            textureids[side] = id;
+        public virtual Block SetTexture(int side, string texture) {
+            textureids[side] = GetTextureID(texture);
             return this;
         }
 

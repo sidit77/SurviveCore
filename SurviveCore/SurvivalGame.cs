@@ -40,11 +40,11 @@ namespace Survive {
                 .AttachShader(Shader.FromFile("./Assets/Shader/HudVertex.glsl", ShaderType.VertexShader))
                 .Link();
 
-            texture = Texture.FromFiles(256, "./Assets/Textures/Bricks.png", "./Assets/Textures/Stone.png", "./Assets/Textures/Dirt.png", "./Assets/Textures/Grass_Side.png", "./Assets/Textures/Grass_Top.png");
+            texture = Texture.FromFiles(256, Block.Textures);
             texture.SetFiltering(TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
             texture.SetLODBias(-0.7f);
 
-            ao_texture = AmbientOcclusion.GetAOTexture3();//Texture.FromFile("./Assets/Textures/ao.png");
+            ao_texture = AmbientOcclusion.GetAOTexture4();//Texture.FromFile("./Assets/Textures/ao.png");
             ao_texture.SetWarpMode(TextureWrapMode.MirroredRepeat);
 
             Console.WriteLine(GL.GetError());

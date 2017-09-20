@@ -47,6 +47,53 @@ namespace Survive.World.Rendering {
             return texture;
         }
 
+        public static Texture GetAOTexture4() {
+            Texture texture = new Texture(TextureTarget.Texture2DArray, 6, SizedInternalFormat.R8, 32, 32, 256);
+
+            int i1 = 14;
+            int i2 = 32 - 2 * i1;
+            int i3 = i2+i1;
+
+            int[,] f = {
+                {  1,   2,   2, 256, 256, 256, 128, 128,   0,  0, i1, i1},
+                {  2,   2,   2, 256, 256, 256, 256, 256,  i1,  0, i2, i1},
+                {  2,   2,   4,   8,   8, 256, 256, 256,  i3,  0, i1, i1},
+                {128, 256, 256, 256, 256, 256, 128, 128,   0, i1, i1, i2},
+                {256, 256, 256, 256, 256, 256, 256, 256,  i1, i1, i2, i2},
+                {256, 256,   8,   8,   8, 256, 256, 256,  i3, i1, i1, i2},
+                {128, 256, 256, 256,  32,  32,  64, 128,   0, i3, i1, i1},
+                {256, 256, 256, 256,  32,  32,  32, 256,  i1, i3, i2, i1},
+                {256, 256,   8,   8,  16,  32,  32, 256,  i3, i3, i1, i1}
+            };
+
+            byte[] data = new byte[32 * 32];
+            for (int i = 0; i < 256; i++) {
+
+                for(int j = 0; j < f.GetLength(0); j++) {
+                    int c1 = 180 + 25 * GetAOValue(f[j, 7], f[j, 0], f[j, 1], i);
+                    int c2 = 180 + 25 * GetAOValue(f[j, 1], f[j, 2], f[j, 3], i);
+                    int c3 = 180 + 25 * GetAOValue(f[j, 3], f[j, 4], f[j, 5], i);
+                    int c4 = 180 + 25 * GetAOValue(f[j, 5], f[j, 6], f[j, 7], i);
+
+                    for (int x = 0; x < f[j, 10]; x++) {
+                        for (int y = 0; y < f[j, 11]; y++) {
+                            float dx = (float)x / f[j, 10];
+                            float dy = (float)y / f[j, 11];
+                            data[(y + f[j, 9]) * 32 + x + f[j, 8]] = (byte)(Mix(c1, c2, c3, c4, dx, dy));
+                        }
+                    }
+                }
+
+                
+                GL.TextureSubImage3D(texture.ID, 0, 0, 0, i, 32, 32, 1, PixelFormat.Red, PixelType.UnsignedByte, data);
+            }
+
+            texture.SetFiltering(TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            texture.GenerateMipmap();
+
+            return texture;
+        }
+
         public static Texture GetAOTexture() {
             Texture texture = new Texture(TextureTarget.Texture2DArray, 4, SizedInternalFormat.R8, 8, 8, 256);
 
@@ -105,9 +152,9 @@ namespace Survive.World.Rendering {
         }
 
         private static int Mix(int c1, int c2, int c3, int c4, float dx, float dy) {
-            float c12 = dy * c2 + (1 - dy) * c1;
-            float c34 = dy * c3 + (1 - dy) * c4;
-            return (int)Math.Round(dx * c34 + (1 - dx) * c12);
+            float c12 = dx * c2 + (1 - dx) * c1;
+            float c34 = dx * c3 + (1 - dx) * c4;
+            return (int)Math.Round(dy * c34 + (1 - dy) * c12);
         }
 
     }

@@ -179,7 +179,7 @@ namespace Survive.World {
         }
 
         private class BorderBlock : Block {
-            public BorderBlock() : base("World Border", -1) {
+            public BorderBlock() : base("World Border") {
             }
             public override bool IsUnrendered {
                 get {

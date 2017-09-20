@@ -21,5 +21,4 @@ void main(){
 	if(ao) {
 		final_color *= texture(aotexture, vec3(fs_in.uv, fs_in.aoid)).r;
 	}
-	final_color = vec4(1,1,1,1) - final_color;
 }
