@@ -114,13 +114,13 @@ namespace Survive {
             if(Keyboard[Key.D]) camera.Position += camera.Right * (Keyboard[Key.ShiftLeft] ? 60 : 10) * (float)e.Time;
 
             
-            if(Mouse[MouseButton.Left] && cooldown > 0.2) {
+            if(Mouse[MouseButton.Left] && !Keyboard[Key.LControl] && cooldown > 0.2) {
                 Vector3? intersection = FindIntersection(false);
                 if(intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
                     cooldown = 0;
                 }
             }
-            if(Mouse[MouseButton.Right] && cooldown > 0.2) {
+            if((Mouse[MouseButton.Right] || (Mouse[MouseButton.Left] && Keyboard[Key.LControl])) && cooldown > 0.2) {
                 Vector3? intersection = FindIntersection(true);
                 if(intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot])) { 
                     cooldown = 0;
@@ -171,12 +171,12 @@ namespace Survive {
 
         protected override void OnRenderFrame(OpenTK.FrameEventArgs e) {
             camera.Update();
-            if(!Keyboard[Key.AltLeft])
+            if(!Keyboard[Key.F1])
                 frustum.Update(camera.CameraMatrix);
 
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            if(Keyboard[Key.ControlLeft]) {
+            if(Keyboard[Key.F2]) {
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
                 GL.Disable(EnableCap.CullFace);
             }else{
@@ -190,7 +190,7 @@ namespace Survive {
             program.Bind();
             program.SetUniform("mvp", false, ref camera.CameraMatrix);
             program.SetUniform("pos", camera.Position);
-            program.SetUniform("ao", Keyboard[Key.X] ? 0 : 1);
+            program.SetUniform("ao", Keyboard[Key.F3] ? 0 : 1);
             world.Draw(frustum);
 
             hudprogram.Bind();
