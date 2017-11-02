@@ -1,10 +1,10 @@
-﻿using Survive.OpenGL;
-using OpenTK.Graphics.OpenGL4;
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
+using OpenTK.Graphics.OpenGL4;
+using SurviveCore.OpenGL;
 
-namespace Survive.World.Rendering {
+namespace SurviveCore.World.Rendering {
     class AmbientOcclusion {
 
         public static Texture GetAOTexture2() {

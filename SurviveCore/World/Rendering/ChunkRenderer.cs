@@ -1,11 +1,10 @@
-﻿using Survive.OpenGL;
-using System;
-using OpenTK.Graphics.OpenGL4;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using OpenTK.Graphics.OpenGL4;
 
-namespace Survive.World.Rendering {
+namespace SurviveCore.World.Rendering {
 
     class ChunkRenderer : IDisposable {
 
@@ -209,7 +208,7 @@ namespace Survive.World.Rendering {
             GL.DeleteBuffer(vbo2);
         }
 
-        private readonly static int[] AoOffsets = { 
+        private static readonly int[] AoOffsets = { 
             -1,-1,
             -1, 0,
             -1, 1,
@@ -220,9 +219,9 @@ namespace Survive.World.Rendering {
              0,-1
         };
 
-        private readonly static int[] shift = { 4, 0, 2, 4, 0, 2 };
+        private static readonly int[] shift = { 4, 0, 2, 4, 0, 2 };
 
-        private readonly static float[] FaceVertices = new float[] {
+        private static readonly float[] FaceVertices = new float[] {
             
              1, 1, 0, 1, 0,
              1, 1, 1, 0, 0,

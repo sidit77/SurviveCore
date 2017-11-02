@@ -1,10 +1,10 @@
-﻿using Survive.OpenGL.Helper;
-using Survive.World.Rendering;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Numerics;
+using SurviveCore.OpenGL.Helper;
+using SurviveCore.World.Rendering;
 
-namespace Survive.World {
+namespace SurviveCore.World {
 
     class BlockWorld : IDisposable{
 

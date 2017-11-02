@@ -1,7 +1,7 @@
 ﻿
 using System.Numerics;
 
-namespace Survive {
+namespace SurviveCore {
     class Camera {
 
         public Matrix4x4 ViewMatrix;

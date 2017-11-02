@@ -1,9 +1,9 @@
 ﻿using System;
-using OpenTK.Graphics.OpenGL4;
 using System.IO;
 using ImageSharp;
+using OpenTK.Graphics.OpenGL4;
 
-namespace Survive.OpenGL {
+namespace SurviveCore.OpenGL {
 
     class Texture : IDisposable {
 

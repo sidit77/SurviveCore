@@ -1,4 +1,4 @@
-﻿namespace Survive.World {
+﻿namespace SurviveCore.World {
 
     class ChunkManager {
         

@@ -1,11 +1,11 @@
 ﻿using System;
-using OpenTK.Graphics.OpenGL4;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using OpenTK.Graphics;
+using OpenTK.Graphics.OpenGL4;
 
-namespace Survive.OpenGL {
+namespace SurviveCore.OpenGL {
 
     class ShaderProgram : IDisposable{
 

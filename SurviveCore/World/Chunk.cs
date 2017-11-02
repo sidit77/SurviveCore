@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Survive.World {
+namespace SurviveCore.World {
 
     abstract class Chunk {
 

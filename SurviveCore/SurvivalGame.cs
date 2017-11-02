@@ -1,14 +1,14 @@
-﻿using OpenTK.Graphics;
+﻿using System;
+using System.Numerics;
+using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Input;
-using Survive.OpenGL;
-using Survive.OpenGL.Helper;
-using Survive.World;
-using Survive.World.Rendering;
-using System;
-using System.Numerics;
+using SurviveCore.OpenGL;
+using SurviveCore.OpenGL.Helper;
+using SurviveCore.World;
+using SurviveCore.World.Rendering;
 
-namespace Survive {
+namespace SurviveCore {
 
     class SurvivalGame : OpenTK.GameWindow{
 

@@ -1,8 +1,8 @@
-﻿using OpenTK;
-using System;
+﻿using System;
 using System.Diagnostics;
+using OpenTK;
 
-namespace Survive {
+namespace SurviveCore {
 
     class Program {
 

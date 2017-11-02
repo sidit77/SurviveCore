@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Numerics;
 
-namespace Survive.World {
+namespace SurviveCore.World {
     
     static class Direction {
         public const int PositiveY = 1;

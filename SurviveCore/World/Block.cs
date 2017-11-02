@@ -1,8 +1,6 @@
-﻿using Survive.World;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
-namespace Survive.World {
+namespace SurviveCore.World {
 
     static class Blocks {
         public readonly static Block Air = new AirBlock();

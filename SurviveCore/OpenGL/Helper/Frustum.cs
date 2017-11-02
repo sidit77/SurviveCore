@@ -1,8 +1,6 @@
-﻿using Survive.World;
-using System;
-using System.Numerics;
+﻿using System.Numerics;
 
-namespace Survive.OpenGL.Helper {
+namespace SurviveCore.OpenGL.Helper {
 
     class Frustum {
 
