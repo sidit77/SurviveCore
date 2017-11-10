@@ -42,12 +42,13 @@ namespace SurviveCore.World {
 
     class WorldChunk : Chunk {
 
+        // ReSharper disable once InconsistentNaming
         public const int BPC = 4;
         public const int Size = 1 << BPC;
 
-        private Chunk[] neighbors;
-        private Block[] blocks;
-        private byte[] metadata;
+        private readonly Chunk[] neighbors;
+        private readonly Block[] blocks;
+        private readonly byte[] metadata;
 
         public WorldChunk() {
             neighbors = new Chunk[]{BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance};
@@ -140,26 +141,20 @@ namespace SurviveCore.World {
     }
 
     class BorderChunk : Chunk {
+        public static BorderChunk Instance { get; } = new BorderChunk();
 
-        private static readonly BorderChunk instance = new BorderChunk();
-        public static BorderChunk Instance {
-            get {
-                return instance;
-            }
-        }
 
-        
-        private static readonly Block border = new BorderBlock();
+        private static readonly Block Border = new BorderBlock();
         private BorderChunk() { }
         
-        public override void SetNeighbor(int d, Chunk c, bool caller) { }
+        public override void SetNeighbor(int d, Chunk c, bool caller = true) { }
 
         public override Chunk GetNeightbor(int d) {
             return this;
         }
 
         public override Block GetBlockDirect(int x, int y, int z) {
-            return border;
+            return Border;
         }
 
         public override bool SetBlockDirect(int x, int y, int z, Block block) {
@@ -181,11 +176,8 @@ namespace SurviveCore.World {
         private class BorderBlock : Block {
             public BorderBlock() : base("World Border") {
             }
-            public override bool IsUnrendered {
-                get {
-                    return true;
-                }
-            }
+            public override bool IsUnrendered => true;
+
             public override bool IsSolid() {
                 return true;
             }

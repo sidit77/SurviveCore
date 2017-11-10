@@ -18,8 +18,9 @@ namespace SurviveCore {
                 game.VSync = VSyncMode.Adaptive;
                 game.X = (DisplayDevice.GetDisplay(DisplayIndex.Default).Width - game.Width) / 2;
                 game.Y = (DisplayDevice.GetDisplay(DisplayIndex.Default).Height - game.Height) / 2;
+                game.WindowState = WindowState.Maximized;
 
-                game.Run(60);
+                game.Run(120);
             }
         }
 

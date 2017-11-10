@@ -4,7 +4,7 @@ namespace SurviveCore.OpenGL.Helper {
 
     class Frustum {
 
-        private Plane[] planes;
+        private readonly Plane[] planes;
 
         public Frustum(Matrix4x4 matrix) {
             planes = new Plane[6];

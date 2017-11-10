@@ -19,7 +19,7 @@ namespace SurviveCore {
         private ShaderProgram program;
         private ShaderProgram hudprogram;
         private Texture texture;
-        private Texture ao_texture;
+        private Texture aoTexture;
         private Camera camera;
         private Frustum frustum;
         private BlockWorld world;
@@ -44,21 +44,23 @@ namespace SurviveCore {
             texture.SetFiltering(TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
             texture.SetLODBias(-0.7f);
 
-            ao_texture = AmbientOcclusion.GetAOTexture4();//Texture.FromFile("./Assets/Textures/ao.png");
-            ao_texture.SetWarpMode(TextureWrapMode.MirroredRepeat);
+            aoTexture = AmbientOcclusion.GetAOTexture4();//Texture.FromFile("./Assets/Textures/ao.png");
+            aoTexture.SetWarpMode(TextureWrapMode.MirroredRepeat);
 
             Console.WriteLine(GL.GetError());
 
-            camera = new Camera(75f * (float)System.Math.PI / 180, (float)Width / (float)Height, 0.1f, 200.0f);
+            camera = new Camera(75f * (float)Math.PI / 180, (float)Width / (float)Height, 0.1f, 200.0f) {
+                Position = new Vector3(50, 50, 50)
+            };
             frustum = new Frustum(camera.CameraMatrix);
             
             world = new BlockWorld();
 
-            Resize += (object sender, EventArgs ea) => {
+            Resize += (sender, ea) => {
                 GL.Viewport(0, 0, Width, Height);
                 camera.Aspect = (float)Width / (float)Height;
             };
-            KeyDown += (object sender, KeyboardKeyEventArgs ea) => {
+            KeyDown += (sender, ea) => {
                 if(!ea.IsRepeat && ea.Key == Key.F12) {
                     VSync = VSync == OpenTK.VSyncMode.Adaptive ? OpenTK.VSyncMode.Off : OpenTK.VSyncMode.Adaptive;
                     Console.WriteLine(VSync);
@@ -68,30 +70,39 @@ namespace SurviveCore {
                     WindowState = WindowState == OpenTK.WindowState.Fullscreen ? OpenTK.WindowState.Normal : OpenTK.WindowState.Fullscreen;
                     Console.WriteLine(WindowState);
                 }
+                if (!ea.IsRepeat && ea.Key == Key.Escape && CursorVisible == false) {
+                    CursorVisible = true;
+                }
                 if (!ea.IsRepeat && ea.Key == Key.Space) {
-                    velocity += 1;
+                    //velocity += 1;
                 }
             };
-            
+            MouseDown += (sender, ea) => {
+                if (ea.Button == MouseButton.Left && !CursorVisible) {
+                    Vector3? intersection = FindIntersection(false);
+                    if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
+                    }
+                }
+                if (ea.Button == MouseButton.Right && !CursorVisible) {
+                    Vector3? intersection = FindIntersection(true);
+                    if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot])) {
+                    }
+                }
+                if (ea.Button == MouseButton.Left &&  CursorVisible) {
+                    CursorVisible = false;
+                }
+            };
             GC.Collect();
             base.OnLoad(e);
         }
-
-        private double cooldown = 0;
-        private Block[] inventory = new Block[] { Blocks.Bricks, Blocks.Stone, Blocks.Grass };
+        
+        private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass };
         private MouseState oldms;
-        private int slot = 0;
+        private int slot;
 
-        private float velocity;
+        //private float velocity;
 
         protected override void OnUpdateFrame(OpenTK.FrameEventArgs e) {
-
-            if(Mouse[MouseButton.Left] && CursorVisible == true) {
-                CursorVisible = false;
-            }
-            if(Keyboard[Key.Escape] && CursorVisible == false) {
-                CursorVisible = true;
-            }
             Vector2 mousepos = Vector2.Zero;
             if(CursorVisible == false) {
                 MouseState ms = OpenTK.Input.Mouse.GetState();
@@ -103,60 +114,79 @@ namespace SurviveCore {
             camera.Rotation *= Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), mousepos.X);
             camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right, mousepos.Y);
 
-            if(Keyboard[Key.Left]) camera.Rotation *= Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), -0.1f);
-            if(Keyboard[Key.Right]) camera.Rotation *= Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0.1f);
-            if(Keyboard[Key.Up]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, 0.1f);
-            if(Keyboard[Key.Down]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, -0.1f);
+            if(Keyboard[Key.Left])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, -0.1f);
+            if(Keyboard[Key.Right]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, 0.1f);
+            if(Keyboard[Key.Up])    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, 0.1f);
+            if(Keyboard[Key.Down])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, -0.1f);
+            if(Keyboard[Key.PageUp]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Forward, 0.1f);
+            if(Keyboard[Key.PageDown]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Forward, -0.1f);
 
-            if(Keyboard[Key.W]) camera.Position += camera.Forward * (Keyboard[Key.ShiftLeft] ? 60 : 10) * (float)e.Time;
-            if(Keyboard[Key.S]) camera.Position += camera.Back * (Keyboard[Key.ShiftLeft] ? 60 : 10) * (float)e.Time;
-            if(Keyboard[Key.A]) camera.Position += camera.Left * (Keyboard[Key.ShiftLeft] ? 60 : 10) * (float)e.Time;
-            if(Keyboard[Key.D]) camera.Position += camera.Right * (Keyboard[Key.ShiftLeft] ? 60 : 10) * (float)e.Time;
+            Vector3 movement = Vector3.Zero;
+            if(Keyboard[Key.W]) movement += camera.Forward;
+            if(Keyboard[Key.S]) movement += camera.Back;  
+            if(Keyboard[Key.A]) movement += camera.Left;   
+            if(Keyboard[Key.D]) movement += camera.Right;
+            movement *= (Keyboard[Key.ShiftLeft] ? 60 : 10) * (float)e.Time;
 
-            
-            if(Mouse[MouseButton.Left] && !Keyboard[Key.LControl] && cooldown > 0.2) {
-                Vector3? intersection = FindIntersection(false);
-                if(intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
-                    cooldown = 0;
-                }
+            if(!Keyboard[Key.AltLeft]) {
+                camera.Position = ClampToWorld(camera.Position, movement);
+            }else {
+                camera.Position += movement;
             }
-            if((Mouse[MouseButton.Right] || (Mouse[MouseButton.Left] && Keyboard[Key.LControl])) && cooldown > 0.2) {
-                Vector3? intersection = FindIntersection(true);
-                if(intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot])) { 
-                    cooldown = 0;
-                } 
-            }
-            cooldown += e.Time;
 
             slot = Math.Abs(Mouse.Wheel / 2 % inventory.Length);
 
             Title = (ChunkRenderer.time / Math.Max(1, ChunkRenderer.number)) + " - Block: " + inventory[slot].Name;
-
-            if (Keyboard[Key.G]) {
-                velocity += -4f * (float)e.Time;
-                velocity += (velocity * velocity) / 150 * (float)e.Time * -Math.Sign(velocity);
-
-                Vector3 force = new Vector3(0, velocity, 0);
-                float num_steps = (float)Math.Round(force.Length()) + 1;
-                Vector3 step = force / num_steps;
-
-                while (num_steps > 0) {
-                    if (world.GetBlock(camera.Position + new Vector3(0, -2, 0) + step) == Blocks.Air) {
-                        camera.Position += step;
-                        num_steps--;
-                    } else {
-
-                        velocity = 0;
-                        break;
-                    }
-                }
-                    
-                
-            } else {
-                velocity = 0;
-            }
-
+            
             base.OnUpdateFrame(e);
+        }
+
+        private bool IsAir(Vector3 pos) {
+            return !world.GetBlock(pos).IsSolid();
+        }
+
+
+        private Vector3 ClampToWorld(Vector3 pos, Vector3 mov) {
+            //bool x = IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f,  0.4f, -0.4f)) &&
+            //         IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f,  0.4f,  0.4f)) &&
+            //         IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f,  0.0f, -0.4f)) &&
+            //         IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f,  0.0f,  0.4f)) &&
+            //         IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f, -1.5f, -0.4f)) &&
+            //         IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f, -1.5f,  0.4f));
+            //bool y = IsAir(pos + new Vector3(-0.4f, mov.Y + mov.Y < 0 ? -1.5f : 0.4f, -0.4f)) &&
+            //         IsAir(pos + new Vector3( 0.4f, mov.Y + mov.Y < 0 ? -1.5f : 0.4f, -0.4f)) &&
+            //         IsAir(pos + new Vector3( 0.4f, mov.Y + mov.Y < 0 ? -1.5f : 0.4f,  0.4f)) &&
+            //         IsAir(pos + new Vector3(-0.4f, mov.Y + mov.Y < 0 ? -1.5f : 0.4f,  0.4f));
+            //bool z = IsAir(pos + new Vector3(-0.4f,  0.4f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f)) &&
+            //         IsAir(pos + new Vector3( 0.4f,  0.4f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f)) &&
+            //         IsAir(pos + new Vector3(-0.4f,  0.0f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f)) &&
+            //         IsAir(pos + new Vector3( 0.4f,  0.0f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f)) &&
+            //         IsAir(pos + new Vector3(-0.4f, -1.5f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f)) &&
+            //         IsAir(pos + new Vector3( 0.4f, -1.5f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f));
+            bool x = CanMoveTo(pos + new Vector3(mov.X, 0, 0));
+            bool y = CanMoveTo(pos + new Vector3(0, mov.Y, 0));
+            bool z = CanMoveTo(pos + new Vector3(0, 0, mov.Z));
+
+            if (!CanMoveTo(pos + new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0)))
+                Console.WriteLine("Error");
+            return pos + new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0); 
+        }
+
+        private bool CanMoveTo(Vector3 pos) {
+            return IsAir(pos + new Vector3(-0.4f,  0.4f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f,  0.4f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f,  0.4f,  0.4f)) &&
+                   IsAir(pos + new Vector3(-0.4f,  0.4f,  0.4f)) &&
+
+                   IsAir(pos + new Vector3(-0.4f, -1.5f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f, -1.5f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f, -1.5f,  0.4f)) &&
+                   IsAir(pos + new Vector3(-0.4f, -1.5f,  0.4f)) &&
+
+                   IsAir(pos + new Vector3(-0.4f, -1.0f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f, -1.0f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f, -1.0f,  0.4f)) &&
+                   IsAir(pos + new Vector3(-0.4f, -1.0f,  0.4f));
         }
 
         private Vector3? FindIntersection(bool pre) {
@@ -186,7 +216,7 @@ namespace SurviveCore {
 
 
             texture.Bind(TextureUnit.Texture0);
-            ao_texture.Bind(TextureUnit.Texture1);
+            aoTexture.Bind(TextureUnit.Texture1);
             program.Bind();
             program.SetUniform("mvp", false, ref camera.CameraMatrix);
             program.SetUniform("pos", camera.Position);
@@ -197,7 +227,7 @@ namespace SurviveCore {
             GL.DrawArrays(PrimitiveType.Points, 0, 1);
 
             base.OnRenderFrame(e);
-            this.SwapBuffers();
+            SwapBuffers();
         }
 
         protected override void OnUnload(EventArgs e) {
@@ -205,7 +235,7 @@ namespace SurviveCore {
             program.Dispose();
             hudprogram.Dispose();
             world.Dispose();
-            ao_texture.Dispose();
+            aoTexture.Dispose();
             texture.Dispose();
         }
 
