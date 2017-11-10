@@ -85,7 +85,8 @@ namespace SurviveCore {
                 }
                 if (ea.Button == MouseButton.Right && !CursorVisible) {
                     Vector3? intersection = FindIntersection(true);
-                    if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot])) {
+                    if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
+                        world.SetBlock(intersection.Value, Blocks.Air);
                     }
                 }
                 if (ea.Button == MouseButton.Left &&  CursorVisible) {
