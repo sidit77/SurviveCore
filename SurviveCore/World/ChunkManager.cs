@@ -3,7 +3,20 @@
 namespace SurviveCore.World {
 
     class ChunkManager {
-        
+
+        public static WorldChunk GetEmptyChunk() {
+            WorldChunk chunk = new WorldChunk();
+            for (int bx = 0; bx < Chunk.Size; bx++) {
+                for (int by = 0; by < Chunk.Size; by++) {
+                    for (int bz = 0; bz < Chunk.Size; bz++) {
+                        chunk.SetBlockDirect(bx, by, bz, Blocks.Air);
+                    }
+                }
+            }
+            chunk.SetBlockDirect(8, 8, 8, Blocks.Bricks);
+            return chunk;
+        }
+
         public static WorldChunk GetChunk(int x, int y, int z, FastNoise fn) {
             float[,,] noisecache = new float[Chunk.Size, Chunk.Size + 1, Chunk.Size];
 

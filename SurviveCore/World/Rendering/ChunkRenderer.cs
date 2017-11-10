@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Threading.Tasks;
 using OpenTK.Graphics.OpenGL4;
 
 namespace SurviveCore.World.Rendering {
@@ -21,8 +22,10 @@ namespace SurviveCore.World.Rendering {
         private int size;
 
         private Stopwatch clock = new Stopwatch();
-        private static List<float> vertices1 = new List<float>();
-        private static List<byte> vertices2 = new List<byte>();
+        [ThreadStatic]
+        private static List<float> vertices1;
+        [ThreadStatic]
+        private static List<byte> vertices2;
 
         private EventHandler handler;
 
@@ -32,7 +35,7 @@ namespace SurviveCore.World.Rendering {
             };
             this.chunk = chunk;
             this.chunk.ChunkUpdate += handler;
-            Update();
+            update = true;
             this.x = x * Chunk.Size;
             this.y = y * Chunk.Size;
             this.z = z * Chunk.Size;
@@ -80,44 +83,58 @@ namespace SurviveCore.World.Rendering {
             set {
                 chunk.ChunkUpdate -= handler;
                 chunk = value;
-                Update();
+                update = true;
                 chunk.ChunkUpdate += handler;
             }
         }
 
         public void Draw() {
-            if(update) {
+            if(update && t == null) {
+                t = Task.Run(() => UpdateMesh());
+            }
+            if(t != null && t.IsCompleted) {
                 Update();
             }
             GL.BindVertexArray(vao);
             GL.DrawArrays(PrimitiveType.Triangles, 0, size);
         }
 
-        private static BlockFace[] mask = new BlockFace[Chunk.Size * Chunk.Size];
-        private static int u, v, d, axis;
-        private static int n, k, l;
-        private static bool done;
-        private static int[] p = new int[3];
-        private static int[] q = new int[3];
-        private static int[] s = new int[3];
+        private Task<TMesh> t;
 
         private void Update() {
-            clock.Restart();
+            //clock.Restart();
 
-            UpdateMesh();
+            //clock.Stop();
+            //ChunkRenderer.time += clock.ElapsedTicks;
+            //ChunkRenderer.number++;
 
-            clock.Stop();
-            ChunkRenderer.time += clock.ElapsedTicks;
-            ChunkRenderer.number++;
-
-
-            GL.NamedBufferData(vbo1, vertices1.Count * sizeof(float), vertices1.ToArray(), BufferUsageHint.DynamicDraw);
-            GL.NamedBufferData(vbo2, vertices2.Count * sizeof(byte), vertices2.ToArray(), BufferUsageHint.DynamicDraw);
-            size = vertices1.Count / 5;
+            TMesh mesh = t.Result;
+            GL.NamedBufferData(vbo1, mesh.vertices1.Length * sizeof(float), mesh.vertices1, BufferUsageHint.DynamicDraw);
+            GL.NamedBufferData(vbo2, mesh.vertices2.Length * sizeof(byte), mesh.vertices2, BufferUsageHint.DynamicDraw);
+            size = mesh.vertices1.Length / 5;
             update = false;
+            t = null;
         }
 
-        private void UpdateMesh() {
+        private class TMesh {
+            public float[] vertices1;
+            public byte[] vertices2;
+        }
+
+        private TMesh UpdateMesh() {
+            if(vertices1 == null)
+                vertices1 = new List<float>();
+            if(vertices2 == null)
+                vertices2 = new List<byte>();
+
+            BlockFace[] mask = new BlockFace[Chunk.Size * Chunk.Size];
+            int u, v, d, axis;
+            int n, k, l;
+            bool done;
+            int[] p = new int[3];
+            int[] q = new int[3];
+            int[] s = new int[3];
+
             vertices1.Clear();
             vertices2.Clear();
 
@@ -199,6 +216,10 @@ namespace SurviveCore.World.Rendering {
                 }
 
             }
+            return new TMesh() {
+                vertices1 = vertices1.ToArray(),
+                vertices2 = vertices2.ToArray()
+            };
         }
 
         private struct BlockFace {
