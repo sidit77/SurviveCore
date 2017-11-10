@@ -50,7 +50,7 @@ namespace SurviveCore {
             Console.WriteLine(GL.GetError());
 
             camera = new Camera(75f * (float)Math.PI / 180, (float)Width / (float)Height, 0.1f, 200.0f) {
-                Position = new Vector3(50, 50, 50)
+                Position = new Vector3(8, 50, 8)
             };
             frustum = new Frustum(camera.CameraMatrix);
             
@@ -139,6 +139,8 @@ namespace SurviveCore {
 
             Title = (ChunkRenderer.time / Math.Max(1, ChunkRenderer.number)) + " - Block: " + inventory[slot].Name;
             
+            world.Recenter((int)Math.Floor(camera.Position.X / 16), (int)Math.Floor(camera.Position.Z / 16));
+
             base.OnUpdateFrame(e);
         }
 

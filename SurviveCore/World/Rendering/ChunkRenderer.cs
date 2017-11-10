@@ -33,9 +33,9 @@ namespace SurviveCore.World.Rendering {
             this.chunk = chunk;
             this.chunk.ChunkUpdate += handler;
             Update();
-            this.x = x * WorldChunk.Size;
-            this.y = y * WorldChunk.Size;
-            this.z = z * WorldChunk.Size;
+            this.x = x * Chunk.Size;
+            this.y = y * Chunk.Size;
+            this.z = z * Chunk.Size;
             vao = GL.GenVertexArray();
             vbo1 = GL.GenBuffer();
             vbo2 = GL.GenBuffer();
@@ -58,16 +58,25 @@ namespace SurviveCore.World.Rendering {
             
         }
 
-        public Vector3 Position {
-            get {
-                return new Vector3(x, y, z);
-            }
+        public Vector3 Position => new Vector3(x, y, z);
+
+        public int X {
+            get => x / Chunk.Size;
+            set => x = value * Chunk.Size;
+        }
+
+        public int Y {
+            get => y / Chunk.Size;
+            set => y = value * Chunk.Size;
+        }
+
+        public int Z {
+            get => z / Chunk.Size;
+            set => z = value * Chunk.Size;
         }
 
         public Chunk Chunk {
-            get {
-                return chunk;
-            }
+            get => chunk;
             set {
                 chunk.ChunkUpdate -= handler;
                 chunk = value;
@@ -84,7 +93,7 @@ namespace SurviveCore.World.Rendering {
             GL.DrawArrays(PrimitiveType.Triangles, 0, size);
         }
 
-        private static BlockFace[] mask = new BlockFace[WorldChunk.Size * WorldChunk.Size];
+        private static BlockFace[] mask = new BlockFace[Chunk.Size * Chunk.Size];
         private static int u, v, d, axis;
         private static int n, k, l;
         private static bool done;
@@ -121,11 +130,11 @@ namespace SurviveCore.World.Rendering {
                 q[v] = 0;
                 q[d] = axis < 3 ? 1 : -1;
 
-                for(p[d] = 0; p[d] < WorldChunk.Size; p[d]++) {
+                for(p[d] = 0; p[d] < Chunk.Size; p[d]++) {
                     n = 0;
                     
-                    for(p[v] = 0; p[v] < WorldChunk.Size; ++p[v]) {
-                        for(p[u] = 0; p[u] < WorldChunk.Size; ++p[u]) {
+                    for(p[v] = 0; p[v] < Chunk.Size; ++p[v]) {
+                        for(p[u] = 0; p[u] < Chunk.Size; ++p[u]) {
                             mask[n++].Visible = !chunk.GetBlockDirect(p[0], p[1], p[2]).IsUnrendered && !(chunk.GetBlock(p[0] + q[0], p[1] + q[1], p[2] + q[2]).IsSolid());
                             if(mask[n - 1].Visible) {
                                 mask[n - 1].TextureID = chunk.GetBlockDirect(p[0], p[1], p[2]).GetTextureID(axis);
@@ -141,17 +150,17 @@ namespace SurviveCore.World.Rendering {
                     }
                     
                     n = 0;
-                    for(p[v] = 0; p[v] < WorldChunk.Size; ++p[v]) {
-                        for(p[u] = 0; p[u] < WorldChunk.Size;) {
+                    for(p[v] = 0; p[v] < Chunk.Size; ++p[v]) {
+                        for(p[u] = 0; p[u] < Chunk.Size;) {
                             if(mask[n].Visible) {
                                 s[d] = 1;
 
-                                for(s[u] = 1; p[u] + s[u] < WorldChunk.Size && mask[n + s[u]].Visible && mask[n + s[u]].CanConnect(mask[n]); ++s[u]) ;
+                                for(s[u] = 1; p[u] + s[u] < Chunk.Size && mask[n + s[u]].Visible && mask[n + s[u]].CanConnect(mask[n]); ++s[u]) ;
 
                                 done = false;
-                                for(s[v] = 1; p[v] + s[v] < WorldChunk.Size; ++s[v]) {
+                                for(s[v] = 1; p[v] + s[v] < Chunk.Size; ++s[v]) {
                                     for(k = 0; k < s[u]; ++k) {
-                                        if(!mask[n + k + s[v] * WorldChunk.Size].Visible || !mask[n + k + s[v] * WorldChunk.Size].CanConnect(mask[n])) {
+                                        if(!mask[n + k + s[v] * Chunk.Size].Visible || !mask[n + k + s[v] * Chunk.Size].CanConnect(mask[n])) {
                                             done = true;
                                             break;
                                         }
@@ -173,7 +182,7 @@ namespace SurviveCore.World.Rendering {
 
                                 for(l = 0; l < s[v]; ++l) {
                                     for(k = 0; k < s[u]; ++k) {
-                                        mask[n + k + l * WorldChunk.Size].Visible = false;
+                                        mask[n + k + l * Chunk.Size].Visible = false;
                                     }
                                 }
 

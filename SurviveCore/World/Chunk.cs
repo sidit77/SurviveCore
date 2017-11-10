@@ -4,6 +4,10 @@ namespace SurviveCore.World {
 
     abstract class Chunk {
 
+        // ReSharper disable once InconsistentNaming
+        public const int BPC = 4;
+        public const int Size = 1 << BPC;
+
         public event EventHandler ChunkUpdate;
 
         public abstract Chunk FindChunk(ref int x, ref int y, ref int z);
@@ -14,6 +18,8 @@ namespace SurviveCore.World {
         public abstract bool SetBlockDirect(int x, int y, int z, Block block);
         public abstract byte GetMetaDataDirect(int x, int y, int z);
         public abstract bool SetMetaDataDirect(int x, int y, int z, byte data);
+
+        public abstract void Delete();
 
         public virtual bool SetBlockDirect(int x, int y, int z, Block block, byte meta) {
             return SetBlockDirect(x, y, z, block) && SetMetaDataDirect(x, y, z, meta);
@@ -33,7 +39,6 @@ namespace SurviveCore.World {
         public virtual bool SetBlock(int x, int y, int z, Block block, byte meta) {
             return FindChunk(ref x, ref y, ref z).SetBlockDirect(x, y, z, block, meta);
         }
-        
         public virtual void Update() {
             ChunkUpdate?.Invoke(this, EventArgs.Empty);
         }
@@ -41,10 +46,6 @@ namespace SurviveCore.World {
     }
 
     class WorldChunk : Chunk {
-
-        // ReSharper disable once InconsistentNaming
-        public const int BPC = 4;
-        public const int Size = 1 << BPC;
 
         private readonly Chunk[] neighbors;
         private readonly Block[] blocks;
@@ -62,6 +63,12 @@ namespace SurviveCore.World {
                 c.SetNeighbor((d + 3) % 6, this, false);
             }
             Update();
+        }
+
+        public override void Delete() {
+            for(int i = 0; i < 6; i++) {
+                neighbors[i].SetNeighbor((i + 3) % 6, BorderChunk.Instance, false);
+            }
         }
 
         public override Chunk GetNeightbor(int d) {
@@ -148,6 +155,7 @@ namespace SurviveCore.World {
         private BorderChunk() { }
         
         public override void SetNeighbor(int d, Chunk c, bool caller = true) { }
+        public override void Delete() { }
 
         public override Chunk GetNeightbor(int d) {
             return this;
