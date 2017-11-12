@@ -58,11 +58,13 @@ namespace SurviveCore.World {
         }
 
         public override void SetNeighbor(int d, Chunk c, bool caller = true) {
+            if(neighbors[d] != c) {
+                Update();
+            }
             neighbors[d] = c;
             if(caller) {
                 c.SetNeighbor((d + 3) % 6, this, false);
             }
-            Update();
         }
 
         public override void Delete() {

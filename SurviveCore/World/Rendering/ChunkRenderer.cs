@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Threading.Tasks;
 using OpenTK.Graphics.OpenGL4;
@@ -8,7 +9,7 @@ using OpenTK.Graphics.OpenGL4;
 namespace SurviveCore.World.Rendering {
 
     class ChunkRenderer : IDisposable {
-
+        
         public static long time;
         public static int number;
 
@@ -20,8 +21,8 @@ namespace SurviveCore.World.Rendering {
         private int vbo1;
         private int vbo2;
         private int size;
-
-        private Stopwatch clock = new Stopwatch();
+        
+        
         [ThreadStatic]
         private static List<float> vertices1;
         [ThreadStatic]
@@ -126,7 +127,7 @@ namespace SurviveCore.World.Rendering {
                 vertices1 = new List<float>();
             if(vertices2 == null)
                 vertices2 = new List<byte>();
-
+            
             BlockFace[] mask = new BlockFace[Chunk.Size * Chunk.Size];
             int u, v, d, axis;
             int n, k, l;
@@ -138,7 +139,7 @@ namespace SurviveCore.World.Rendering {
             vertices1.Clear();
             vertices2.Clear();
 
-            for(axis = 0; axis < 6; axis++) {
+            for (axis = 0; axis < 6; axis++) {
                 d = axis % 3;
                 u = (d + 1) % 3;
                 v = (d + 2) % 3;
@@ -222,6 +223,7 @@ namespace SurviveCore.World.Rendering {
             };
         }
 
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
         private struct BlockFace {
             public bool Visible;
             public int TextureID;
@@ -306,205 +308,3 @@ namespace SurviveCore.World.Rendering {
 
 }
 
-//class GreedyChunkMesher : IChunkMesher {
-//    public float[] CreateChunkMesh(Chunk chunk, int meshx, int meshy, int meshz, int size) {
-//        Stopwatch clock = new Stopwatch();
-//        clock.Start();
-//
-//        List<float> vertices = new List<float>();
-//
-//        int l, w, h, k, u, v, n, i, j, d, id;
-//        Direction op;
-//        int[] x = new int[3];
-//        int[] q = new int[3];
-//        float[,] ve = new float[4, 5];
-//        bool[] mask = new bool[WorldChunk.Size * WorldChunk.Size];
-//
-//        foreach(Direction dir in Enum.GetValues(typeof(Direction))) {
-//            id = dir.GetID();
-//            d = dir.GetAxisID();
-//            op = dir.GetOpposite();
-//            u = (d + 1) % 3;
-//            v = (d + 2) % 3;
-//
-//            x[0] = 0;
-//            x[1] = 0;
-//            x[2] = 0;
-//
-//            q[0] = dir.GetX();
-//            q[1] = dir.GetY();
-//            q[2] = dir.GetZ();
-//            
-//            for(x[d] = 0; x[d] < WorldChunk.Size; x[d]++) {
-//                n = 0;
-//                if(x[d] + q[d] < 0 || x[d] + q[d] >= WorldChunk.Size) {
-//                    for(x[v] = 0; x[v] < WorldChunk.Size; ++x[v]) {
-//                        for(x[u] = 0; x[u] < WorldChunk.Size; ++x[u]) {
-//                            mask[n++] = !chunk.GetBlockDirect(x[0], x[1], x[2]).IsUnrendered && !(chunk.GetBlock(x[0] + q[0], x[1] + q[1], x[2] + q[2]).GetFaceType(op) == FaceType.Solid);
-//                        }
-//                    }
-//                }else {
-//                    for(x[v] = 0; x[v] < WorldChunk.Size; ++x[v]) {
-//                        for(x[u] = 0; x[u] < WorldChunk.Size; ++x[u]) {
-//                            mask[n++] = !chunk.GetBlockDirect(x[0], x[1], x[2]).IsUnrendered && !(chunk.GetBlockDirect(x[0] + q[0], x[1] + q[1], x[2] + q[2]).GetFaceType(op) == FaceType.Solid);
-//                        }
-//                    }
-//                }
-//                n = 0;
-//                for(j = 0; j < WorldChunk.Size; ++j) {
-//                    for(i = 0; i < WorldChunk.Size;) {
-//                        if(mask[n]) {
-//
-//                            for(w = 1; i + w < WorldChunk.Size && mask[n + w]; ++w) ;
-//
-//                            // Compute height (this is slightly awkward
-//                            var done = false;
-//                            for(h = 1; j + h < WorldChunk.Size; ++h) {
-//                                for(k = 0; k < w; ++k) {
-//                                    if(!mask[n + k + h * WorldChunk.Size]) {
-//                                        done = true;
-//                                        break;
-//                                    }
-//                                }
-//                                if(done) break;
-//                            }
-//
-//                            ve[0, u] = i;
-//                            ve[0, v] = j;
-//                            ve[0, d] = x[d] + Math.Max(q[d], 0);
-//                            ve[0, 3] = 0;
-//                            ve[0, 4] = 0;
-//
-//                            ve[1, u] = i + w;
-//                            ve[1, v] = j;
-//                            ve[1, d] = x[d] + Math.Max(q[d], 0);
-//                            ve[1, 3] = w;
-//                            ve[1, 4] = 0;
-//
-//                            ve[2, u] = i + w;
-//                            ve[2, v] = j + h;
-//                            ve[2, d] = x[d] + Math.Max(q[d], 0);
-//                            ve[2, 3] = w;
-//                            ve[2, 4] = h;
-//
-//                            ve[3, u] = i;
-//                            ve[3, v] = j + h;
-//                            ve[3, d] = x[d] + Math.Max(q[d], 0);
-//                            ve[3, 3] = 0;
-//                            ve[3, 4] = h;
-//
-//                            for(int c = 0; c < order2.GetLength(1); c++) {
-//                                vertices.Add(meshx - 0.5f + ve[order2[Math.Max(q[d], 0), c], 0]);
-//                                vertices.Add(meshy - 0.5f + ve[order2[Math.Max(q[d], 0), c], 1]);
-//                                vertices.Add(meshz - 0.5f + ve[order2[Math.Max(q[d], 0), c], 2]);
-//                                vertices.Add(ve[order2[Math.Max(q[d], 0), c], 3]);
-//                                vertices.Add(ve[order2[Math.Max(q[d], 0), c], 4]);
-//                                vertices.Add(q[0]);
-//                                vertices.Add(q[1]);
-//                                vertices.Add(q[2]);
-//                            }
-//
-//                            for(l = 0; l < h; ++l) {
-//                                for(k = 0; k < w; ++k) {
-//                                    mask[n + k + l * WorldChunk.Size] = false;
-//                                }
-//                            }
-//
-//
-//                            i += w; n += w;
-//                        } else {
-//                            ++i;
-//                            ++n;
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//
-//        clock.Stop();
-//        ChunkRenderer.time += clock.ElapsedTicks;
-//        ChunkRenderer.number++;
-//        return vertices.ToArray();
-//    }
-//
-//    private readonly static int[,] order2 = new int[2, 6]{
-//        { 2, 1, 3, 0, 3, 1 },
-//        { 0, 1, 2, 2, 3, 0 }
-//    };
-//}
-
-//class CulledChunkMesher : IChunkMesher {
-//
-//    public float[] CreateChunkMesh(Chunk c, int x, int y, int z, int size) {
-//      List<float> vertices = new List<float>(WorldChunk.Size * WorldChunk.Size * 2 * 6 * 8);
-//      for(int x2 = 0; x2 < WorldChunk.Size; x2++) {
-//          for(int y2 = 0; y2 < WorldChunk.Size; y2++) {
-//              for(int z2 = 0; z2 < WorldChunk.Size; z2++) {
-//                  if(!c.GetBlockDirect(x2, y2, z2).IsUnrendered) {
-//                      foreach(Direction d2 in Enum.GetValues(typeof(Direction))) {
-//                          if(!(c.GetBlock(x2 + d2.GetX(), y2 + d2.GetY(), z2 + d2.GetZ()).GetFaceType(d2.GetOpposite()) == FaceType.Solid)) {
-//                              for(int j2 = 0; j2 < order.GetLength(1); j2++) {
-//                                  vertices.Add(x + x2 + faces[d2.GetID(), order[0, j2], 0]);
-//                                  vertices.Add(y + y2 + faces[d2.GetID(), order[0, j2], 1]);
-//                                  vertices.Add(z + z2 + faces[d2.GetID(), order[0, j2], 2]);
-//                                  vertices.Add(y + y2 + faces[d2.GetID(), order[0, j2], 3]);
-//                                  vertices.Add(z + z2 + faces[d2.GetID(), order[0, j2], 4]);
-//                                  vertices.Add(d2.GetX());
-//                                  vertices.Add(d2.GetY());
-//                                  vertices.Add(d2.GetZ());
-//                              }
-//                          }
-//                      }
-//                  }
-//              }
-//          }
-//      }
-//      return vertices.ToArray();
-//  }
-//
-//    private static readonly float[,,] faces = new float[6, 4, 5]{
-//                {
-//                    {  0.5f, -0.5f,  0.5f, 0, 1 },
-//                    {  0.5f, -0.5f, -0.5f, 0, 0 },
-//                    {  0.5f,  0.5f, -0.5f, 1, 0 },
-//                    {  0.5f,  0.5f,  0.5f, 1, 1 }
-//                },
-//                {
-//                    { -0.5f,  0.5f,  0.5f, 0, 1 },
-//                    {  0.5f,  0.5f,  0.5f, 1, 1 },
-//                    {  0.5f,  0.5f, -0.5f, 1, 0 },
-//                    { -0.5f,  0.5f, -0.5f, 0, 0 }
-//                },
-//                {
-//                    {  0.5f, -0.5f, -0.5f, 1, 0 },
-//                    { -0.5f, -0.5f, -0.5f, 0, 0 },
-//                    { -0.5f,  0.5f, -0.5f, 0, 1 },
-//                    {  0.5f,  0.5f, -0.5f, 1, 1 }
-//                },
-//                {
-//                    { -0.5f, -0.5f, -0.5f, 0, 0 },
-//                    { -0.5f, -0.5f,  0.5f, 0, 1 },
-//                    { -0.5f,  0.5f,  0.5f, 1, 1 },
-//                    { -0.5f,  0.5f, -0.5f, 1, 0 }
-//                },
-//                {
-//                    {  0.5f, -0.5f,  0.5f, 1, 1 },
-//                    { -0.5f, -0.5f,  0.5f, 0, 1 },
-//                    { -0.5f, -0.5f, -0.5f, 0, 0 },
-//                    {  0.5f, -0.5f, -0.5f, 1, 0 }
-//                },
-//                {
-//                    { -0.5f, -0.5f,  0.5f, 0, 0 },
-//                    {  0.5f, -0.5f,  0.5f, 1, 0 },
-//                    {  0.5f,  0.5f,  0.5f, 1, 1 },
-//                    { -0.5f,  0.5f,  0.5f, 0, 1 }
-//                }
-//            };
-//    
-//    private readonly static int[,] order = new int[2, 6]{
-//                { 0, 1, 2, 2, 3, 0 },
-//                { 1, 2, 3, 3, 0, 1 }
-//            };
-//    
-//
-//}

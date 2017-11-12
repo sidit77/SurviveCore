@@ -6,14 +6,16 @@ namespace SurviveCore.World {
 
         public static WorldChunk GetEmptyChunk() {
             WorldChunk chunk = new WorldChunk();
+            int i = 0;
             for (int bx = 0; bx < Chunk.Size; bx++) {
                 for (int by = 0; by < Chunk.Size; by++) {
                     for (int bz = 0; bz < Chunk.Size; bz++) {
-                        chunk.SetBlockDirect(bx, by, bz, Blocks.Air);
+                        i++;
+                        chunk.SetBlockDirect(bx, by, bz, (i % 50 == 0) ? Blocks.Stone : Blocks.Air);
                     }
                 }
             }
-            chunk.SetBlockDirect(8, 8, 8, Blocks.Bricks);
+            //chunk.SetBlockDirect(8, 8, 8, Blocks.Bricks);
             return chunk;
         }
 
