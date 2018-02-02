@@ -49,7 +49,7 @@ namespace SurviveCore {
 
             Console.WriteLine(GL.GetError());
 
-            camera = new Camera(75f * (float)Math.PI / 180, (float)Width / (float)Height, 0.1f, 200.0f) {
+            camera = new Camera(75f * (float)Math.PI / 180, (float)Width / (float)Height, 0.1f, 250.0f) {
                 Position = new Vector3(8, 50, 8)
             };
             frustum = new Frustum(camera.CameraMatrix);
