@@ -33,31 +33,31 @@ namespace SurviveCore.OpenGL {
             }
         }
 
-        public Texture SetSubImage(int level, int xoffset, int width, OpenTK.Graphics.OpenGL4.PixelFormat format, PixelType type, IntPtr pixels) {
+        public Texture SetSubImage(int level, int xoffset, int width, PixelFormat format, PixelType type, IntPtr pixels) {
             GL.TextureSubImage1D(id, level, xoffset, width, format, type, pixels);
             return this;
         }
 
-        public Texture SetSubImage<T>(int level, int xoffset, int width, OpenTK.Graphics.OpenGL4.PixelFormat format, PixelType type, T[] pixels) where T : struct{
+        public Texture SetSubImage<T>(int level, int xoffset, int width, PixelFormat format, PixelType type, T[] pixels) where T : struct{
             GL.TextureSubImage1D(id, level, xoffset, width, format, type, pixels);
             return this;
         }
 
-        public Texture SetSubImage(int level, int xoffset, int yoffset, int width, int height, OpenTK.Graphics.OpenGL4.PixelFormat format, PixelType type, IntPtr pixels) {
+        public Texture SetSubImage(int level, int xoffset, int yoffset, int width, int height, PixelFormat format, PixelType type, IntPtr pixels) {
             GL.TextureSubImage2D(id, level, xoffset, yoffset, width, height, format, type, pixels);
             return this;
         }
-        public Texture SetSubImage<T>(int level, int xoffset, int yoffset, int width, int height, OpenTK.Graphics.OpenGL4.PixelFormat format, PixelType type, T[] pixels) where T : struct{
+        public Texture SetSubImage<T>(int level, int xoffset, int yoffset, int width, int height, PixelFormat format, PixelType type, T[] pixels) where T : struct{
             GL.TextureSubImage2D(id, level, xoffset, yoffset, width, height, format, type, pixels);
             return this;
         }
 
-        public Texture SetSubImage(int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth, OpenTK.Graphics.OpenGL4.PixelFormat format, PixelType type, IntPtr pixels) {
+        public Texture SetSubImage(int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth, PixelFormat format, PixelType type, IntPtr pixels) {
             GL.TextureSubImage3D(id, level, xoffset, yoffset, zoffset, width, height, depth, format, type, pixels);
             return this;
         }
 
-        public Texture SetSubImage<T>(int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth, OpenTK.Graphics.OpenGL4.PixelFormat format, PixelType type, T[] pixels) where T : struct {
+        public Texture SetSubImage<T>(int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth, PixelFormat format, PixelType type, T[] pixels) where T : struct {
             GL.TextureSubImage3D(id, level, xoffset, yoffset, zoffset, width, height, depth, format, type, pixels);
             return this;
         }
@@ -106,7 +106,7 @@ namespace SurviveCore.OpenGL {
                 
 
                 //using (var imgdata = img.Lock()) {
-                    t.SetSubImage(0, 0, 0, img.Width, img.Height, OpenTK.Graphics.OpenGL4.PixelFormat.Bgra, PixelType.UnsignedByte, img.Pixels.AsBytes().ToArray());
+                    t.SetSubImage(0, 0, 0, img.Width, img.Height, PixelFormat.Bgra, PixelType.UnsignedByte, img.Pixels.AsBytes().ToArray());
                 //}
 
                 t.SetFiltering(TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);

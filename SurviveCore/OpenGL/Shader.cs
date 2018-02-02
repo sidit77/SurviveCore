@@ -9,18 +9,16 @@ namespace SurviveCore.OpenGL {
 
     class ShaderProgram : IDisposable{
 
-        private static ShaderProgram current = null;
-        public ShaderProgram Current {
-            get {
-                return current;
-            }
+        private static ShaderProgram current;
+        public static ShaderProgram Current {
+            get => current;
             set {
                 current = value;
-                GL.UseProgram(current == null ? 0 : current.ID);
+                GL.UseProgram(current?.ID ?? 0);
             }
         }
 
-        private int id;
+        private readonly int id;
         private Dictionary<string, int> uniforms;
 
         public ShaderProgram() {
@@ -28,21 +26,15 @@ namespace SurviveCore.OpenGL {
             uniforms = new Dictionary<string, int>();
         }
 
-        public int ID {
-            get {
-                return id;
-            }
-        }
+        public int ID => id;
 
         public ShaderProgram Link() {
             GL.LinkProgram(id);
 
-            int status;
-            GL.GetProgram(id, GetProgramParameterName.LinkStatus, out status);
+            GL.GetProgram(id, GetProgramParameterName.LinkStatus, out int status);
 
             if(status != 1) {
-                string info;
-                GL.GetProgramInfoLog(id, out info);
+                GL.GetProgramInfoLog(id, out string info);
                 Console.WriteLine(info);
                 Dispose();
             }
@@ -92,58 +84,58 @@ namespace SurviveCore.OpenGL {
         #region UNIFORMS_LOCATION
 
         public void SetUniform(int location, int value) {
-            GL.Uniform1(location, value);
+            GL.ProgramUniform1(id, location, value);
         }
 
         public void SetUniform(int location, float value) {
-            GL.Uniform1(location, value);
+            GL.ProgramUniform1(id, location, value);
         }
 
         public void SetUniform(int location, int xValue, int yValue) {
-            GL.Uniform2(location, xValue, yValue);
+            GL.ProgramUniform2(id, location, xValue, yValue);
         }
 
         public void SetUniform(int location, float xValue, float yValue) {
-            GL.Uniform2(location, xValue, yValue);
+            GL.ProgramUniform2(id, location, xValue, yValue);
         }
 
         public void SetUniform(int location, Vector2 vec) {
-            GL.Uniform2(location, vec.X, vec.Y);
+            GL.ProgramUniform2(id, location, vec.X, vec.Y);
         }
 
         public void SetUniform(int location, int xValue, int yValue, int zValue) {
-            GL.Uniform3(location, xValue, yValue, zValue);
+            GL.ProgramUniform3(id, location, xValue, yValue, zValue);
         }
 
         public void SetUniform(int location, float xValue, float yValue, float zValue) {
-            GL.Uniform3(location, xValue, yValue, zValue);
+            GL.ProgramUniform3(id, location, xValue, yValue, zValue);
         }
 
         public void SetUniform(int location, Vector3 vec) {
-            GL.Uniform3(location, vec.X, vec.Y, vec.Z);
+            GL.ProgramUniform3(id, location, vec.X, vec.Y, vec.Z);
         }
 
         public void SetUniform(int location, float xValue, float yValue, float zValue, float wValue) {
-            GL.Uniform4(location, xValue, yValue, zValue, wValue);
+            GL.ProgramUniform4(id, location, xValue, yValue, zValue, wValue);
         }
 
         public void SetUniform(int location, int xValue, int yValue, int zValue, int wValue) {
-            GL.Uniform4(location, xValue, yValue, zValue, wValue);
+            GL.ProgramUniform4(id, location, xValue, yValue, zValue, wValue);
         }
 
         public void SetUniform(int location, Vector4 vec) {
-            GL.Uniform4(location, vec.X, vec.Y, vec.Z, vec.W);
+            GL.ProgramUniform4(id, location, vec.X, vec.Y, vec.Z, vec.W);
         }
 
         public void SetUniform(int location, Color4 color) {
-            GL.Uniform4(location, color);
+            GL.ProgramUniform4(id, location, color.R, color.G, color.B, color.A);
         }
 
         public void SetUniform(int location, bool transpose, ref Matrix4x4 matrix) {
             //GL.UniformMatrix4(location, transpose, Matrix4x4.);
             unsafe{
                 fixed (float* matrix_ptr = &matrix.M11) {
-                    GL.UniformMatrix4(location, 1, transpose, matrix_ptr);
+                    GL.ProgramUniformMatrix4(id, location, 1, transpose, matrix_ptr);
                 }
             }
         }
@@ -226,7 +218,7 @@ namespace SurviveCore.OpenGL {
 
     class Shader : IDisposable {
 
-        private int id;
+        private readonly int id;
 
         public Shader(ShaderType type, string source) {
             id = GL.CreateShader(type);
@@ -234,29 +226,23 @@ namespace SurviveCore.OpenGL {
             GL.ShaderSource(id, source);
             GL.CompileShader(id);
 
-            int status;
-            GL.GetShader(id, ShaderParameter.CompileStatus, out status);
+            GL.GetShader(id, ShaderParameter.CompileStatus, out int status);
 
             if(status != 1) {
-                string info;
-                GL.GetShaderInfoLog(id, out info);
+                GL.GetShaderInfoLog(id, out string info);
                 Console.WriteLine(info);
                 Dispose();
             }
         }
 
-        public int ID {
-            get {
-                return id;
-            }
-        }
+        public int ID => id;
 
         public void Dispose() {
             GL.DeleteShader(id);
         }
         
         public static Shader FromFile(string file, ShaderType type) {
-            string line = "";
+            string line;
             using(StreamReader sr = File.OpenText(file)) {
                 line = sr.ReadToEnd();
             }

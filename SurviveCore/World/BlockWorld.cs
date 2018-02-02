@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using Priority_Queue;
 using SurviveCore.OpenGL.Helper;
 using SurviveCore.World.Rendering;
 using SurviveCore.World.Utils;
-using Vector3 = System.Numerics.Vector3;
 
 namespace SurviveCore.World {
 

@@ -33,94 +33,41 @@ namespace SurviveCore {
         }
 
         public Quaternion Rotation {
-            get {
-                return rotation;
-            }
-            set {
-                rotation = value;
-            }
+            get => rotation;
+            set => rotation = value;
         }
 
         public Vector3 Position {
-            get {
-                return position;
-            }
-            set {
-                position = value;
-            }
+            get => position;
+            set => position = value;
         }
 
         public float Fov {
-            get {
-                return fov;
-            }
-            set {
-                this.fov = value;
-            }
+            get => fov;
+            set => fov = value;
         }
 
         public float Aspect {
-            get {
-                return aspect;
-            }
-            set {
-                this.aspect = value;
-            }
+            get => aspect;
+            set => aspect = value;
         }
 
         public float ZNear {
-            get {
-                return zNear;
-            }
-            set {
-                this.zNear = value;
-            }
+            get => zNear;
+            set => zNear = value;
         }
 
         public float ZFar {
-            get {
-                return zFar;
-            }
-            set {
-                this.zFar = value;
-            }
+            get => zFar;
+            set => zFar = value;
         }
         
-        public Vector3 Forward {
-            get {
-                return Vector3.Transform(forward, Quaternion.Conjugate(rotation));
-            }
-        }
-
-        public Vector3 Back {
-            get {
-                return Vector3.Transform(back   , Quaternion.Conjugate(rotation));
-            }
-        }
-
-        public Vector3 Left {
-            get {
-                return Vector3.Transform(left   , Quaternion.Conjugate(rotation));
-            }
-        }
-
-        public Vector3 Right {
-            get {
-                return Vector3.Transform(right  , Quaternion.Conjugate(rotation));
-            }
-        }
-
-        public Vector3 Up {
-            get {
-                return Vector3.Transform(up     , Quaternion.Conjugate(rotation));
-            }
-        }
-
-        public Vector3 Down {
-            get {
-                return Vector3.Transform(down   , Quaternion.Conjugate(rotation));
-            }
-        }
+        public Vector3 Forward => Vector3.Transform(forward, Quaternion.Conjugate(rotation));
+        public Vector3 Back => Vector3.Transform(back   , Quaternion.Conjugate(rotation));
+        public Vector3 Left => Vector3.Transform(left   , Quaternion.Conjugate(rotation));
+        public Vector3 Right => Vector3.Transform(right  , Quaternion.Conjugate(rotation));
+        public Vector3 Up => Vector3.Transform(up     , Quaternion.Conjugate(rotation));
+        public Vector3 Down => Vector3.Transform(down   , Quaternion.Conjugate(rotation));
 
         private static readonly Vector3 forward = new Vector3( 0,  0, -1);
         private static readonly Vector3 back    = new Vector3( 0,  0,  1);

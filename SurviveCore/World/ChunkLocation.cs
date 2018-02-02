@@ -39,8 +39,8 @@ namespace SurviveCore.World {
                 case Direction.PositiveX: return new ChunkLocation(x + 1, y    , z    );
                 case Direction.PositiveY: return new ChunkLocation(x    , y + 1, z    );
                 case Direction.PositiveZ: return new ChunkLocation(x    , y    , z + 1);
+                default: throw new ArgumentException(direction + " isnt a direction");
             }
-            throw new ArgumentException(direction + " isnt a direction");
         }
         
         public override bool Equals(object obj) {

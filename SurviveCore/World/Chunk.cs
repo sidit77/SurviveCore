@@ -1,5 +1,4 @@
-﻿using OpenTK.Graphics.OpenGL4;
-using SurviveCore.World.Rendering;
+﻿using SurviveCore.World.Rendering;
 using SurviveCore.World.Utils;
 
 namespace SurviveCore.World {
@@ -47,8 +46,7 @@ namespace SurviveCore.World {
         public ChunkLocation Location => location;
 
         public override bool Equals(object obj) {
-            Chunk o = obj as Chunk;
-            return 0 != null && o.location.Equals(location);
+            return obj is Chunk o && o.location.Equals(location);
         }
 
         public override int GetHashCode() {

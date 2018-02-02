@@ -41,13 +41,13 @@ namespace SurviveCore.World {
 
         public Block(string name) {
             this.name = name;
-            this.textureids = new int[] { -1, -1, -1, -1, -1, -1 };
+            textureids = new [] { -1, -1, -1, -1, -1, -1 };
         }
 
         public Block(string name, string texture) {
             this.name = name;
             int texid = GetTextureID(texture);
-            this.textureids = new int[] {texid, texid, texid, texid, texid, texid };
+            textureids = new []{texid, texid, texid, texid, texid, texid };
         }
 
         public virtual Block SetTexture(int side, string texture) {

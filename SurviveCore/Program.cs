@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 using OpenTK;
-using OpenTK.Graphics.OpenGL;
 
 namespace SurviveCore {
-
-    class Program {
+    static class Program {
 
         [STAThread]
         static void Main(string[] args) {
@@ -26,22 +22,12 @@ namespace SurviveCore {
             }
         }
 
-        private static async void  Test() {
-            await Task.Run(() => {
-                Thread.Sleep(2000);
-                Console.WriteLine("2: " + Thread.CurrentThread.ManagedThreadId);
-            });
-
-            Console.WriteLine("3: " + Thread.CurrentThread.ManagedThreadId);
-
-        }
-
     }
 
     class ConsoleTraceListener : TraceListener {
 
         public ConsoleTraceListener() {
-            this.TraceOutputOptions = TraceOptions.None;
+            TraceOutputOptions = TraceOptions.None;
         }
 
         public override void Write(string message) {

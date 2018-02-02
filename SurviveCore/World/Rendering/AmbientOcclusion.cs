@@ -50,9 +50,9 @@ namespace SurviveCore.World.Rendering {
         public static Texture GetAOTexture4() {
             Texture texture = new Texture(TextureTarget.Texture2DArray, 6, SizedInternalFormat.R8, 32, 32, 256);
 
-            int i1 = 14;
-            int i2 = 32 - 2 * i1;
-            int i3 = i2+i1;
+            const int i1 = 14;
+            const int i2 = 32 - 2 * i1;
+            const int i3 = i2+i1;
 
             int[,] f = {
                 {  1,   2,   2, 256, 256, 256, 128, 128,   0,  0, i1, i1},
