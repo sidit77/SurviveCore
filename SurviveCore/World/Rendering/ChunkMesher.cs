@@ -22,6 +22,9 @@ namespace SurviveCore.World.Rendering {
         }
 
         public Mesh GenerateMesh(Chunk chunk) {
+            if(chunk.isEmpty())
+                return null;
+            
             int x = chunk.Location.WX;
             int y = chunk.Location.WY;
             int z = chunk.Location.WZ;
@@ -38,7 +41,10 @@ namespace SurviveCore.World.Rendering {
                 q[v] = 0;
                 q[d] = axis < 3 ? 1 : -1;
 
-                for(p[d] = 0; p[d] < Chunk.Size; p[d]++) {
+                int f1 = !chunk.IsFull() ? 0          : (axis >= 3 ? 0 : Chunk.Size - 1);
+                int f2 = !chunk.IsFull() ? Chunk.Size : (axis >= 3 ? 1 : Chunk.Size);
+                
+                for(p[d] = f1; p[d] < f2; p[d]++) {
                     n = 0;
                     
                     for(p[v] = 0; p[v] < Chunk.Size; ++p[v]) {

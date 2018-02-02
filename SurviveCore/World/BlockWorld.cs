@@ -16,7 +16,7 @@ namespace SurviveCore.World {
         private const int RendererPoolSize = 256;
         
         public const int Height = 8;
-        public const int LoadDistance = 8;
+        public const int LoadDistance = 12;
 	    public const int UnloadDistance = LoadDistance + 1;
 
         private readonly ChunkMesher mesher;
@@ -47,17 +47,10 @@ namespace SurviveCore.World {
 
             generator = new WorldGenerator((int)Stopwatch.GetTimestamp());
 	        
-	        for (int x = -LoadDistance; x <= LoadDistance; x++) {
-		        for (int z = -LoadDistance; z <= LoadDistance; z++) {
-			        for (int y = 0; y < Height; y++) {
-				        ChunkLocation l = new ChunkLocation(centerX + x,y, centerZ + z);
-				        if (GetDistanceSquared(l) <= LoadDistance * LoadDistance && !chunkLoadQueue.Contains(l) && !chunkMap.ContainsKey(l))
-					        chunkLoadQueue.Enqueue(GetDistanceSquared(l, true), l);
-			        }
-		        }
-	        }
+	        UpdateChunkQueues();
 	        
             t.Start();
+	        
         }
 
         public void Draw(Frustum frustum) {
@@ -71,20 +64,7 @@ namespace SurviveCore.World {
                 centerX = cx;
                 centerZ = cz;
 	            
-	            for (int x = -LoadDistance; x <= LoadDistance; x++) {
-		            for (int z = -LoadDistance; z <= LoadDistance; z++) {
-			            for (int y = 0; y < Height; y++) {
-				            ChunkLocation l = new ChunkLocation(centerX + x,y, centerZ + z);
-				            if (GetDistanceSquared(l) <= LoadDistance * LoadDistance && !chunkLoadQueue.Contains(l) && !chunkMap.ContainsKey(l))
-					            chunkLoadQueue.Enqueue(GetDistanceSquared(l, true), l);
-			            }
-		            }
-	            }
-
-	            foreach (Chunk chunk in chunkMap.Values.Where(c => GetDistanceSquared(c.Location) > UnloadDistance * UnloadDistance)) {
-		            chunkUnloadStack.Push(chunk);
-	            }
-	            
+	            UpdateChunkQueues();
             }
 	        UnloadChunks();
 	        LoadChunks();
@@ -143,6 +123,22 @@ namespace SurviveCore.World {
                 c.Dispose();
         }
 
+	    private void UpdateChunkQueues() {
+		    for (int x = -LoadDistance; x <= LoadDistance; x++) {
+			    for (int z = -LoadDistance; z <= LoadDistance; z++) {
+				    for (int y = 0; y < Height; y++) {
+					    ChunkLocation l = new ChunkLocation(centerX + x,y, centerZ + z);
+					    if (GetDistanceSquared(l) <= LoadDistance * LoadDistance && !chunkMap.ContainsKey(l))
+						    chunkLoadQueue.Enqueue(GetDistanceSquared(l, true), l);
+				    }
+			    }
+		    }
+
+		    foreach (Chunk chunk in chunkMap.Values.Where(c => GetDistanceSquared(c.Location) > UnloadDistance * UnloadDistance)) {
+			    chunkUnloadStack.Push(chunk);
+		    }
+	    }
+	    
         private void LoadChunks() {
 	        int i = 5;
 	        while (i > 0 && chunkLoadQueue.Count > 0) {
@@ -158,6 +154,7 @@ namespace SurviveCore.World {
 
 		        for (int d = 0; d < 6; d++)
 			        chunk.SetNeighbor(d, GetChunk(l.GetAdjecent(d)));
+		        chunk.SetMeshUpdates(true);
 		        chunkMap.Add(l, chunk);
 		        chunkLoadQueue.Remove(l);
 		        i--;
@@ -214,8 +211,12 @@ namespace SurviveCore.World {
 		    public int Count => items.Count;
 
 		    public void Enqueue(int distance, ChunkLocation pos) {
-			    items.Enqueue(pos, distance);
-			    hashSet.Add(pos);
+			    if (hashSet.Contains(pos)) {
+				    items.TryUpdatePriority(pos, distance);
+			    }else {
+				    items.Enqueue(pos, distance);
+				    hashSet.Add(pos);
+			    }
 		    }
 
 		    public ChunkLocation Dequeue() {

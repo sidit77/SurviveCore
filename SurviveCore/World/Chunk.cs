@@ -1,4 +1,5 @@
-﻿using SurviveCore.World.Rendering;
+﻿using OpenTK.Graphics.OpenGL4;
+using SurviveCore.World.Rendering;
 using SurviveCore.World.Utils;
 
 namespace SurviveCore.World {
@@ -21,6 +22,8 @@ namespace SurviveCore.World {
         public abstract void Update();
         public abstract bool RegenerateMesh(ChunkMesher m);
         public abstract void CleanUp();
+        public abstract bool IsFull();
+        public abstract bool isEmpty();
         
         public virtual bool SetBlockDirect(int x, int y, int z, Block block, byte meta) {
             return SetBlockDirect(x, y, z, block) && SetMetaDataDirect(x, y, z, meta);
@@ -64,6 +67,7 @@ namespace SurviveCore.World {
         }
 
         private int renderedblocks;
+        private bool meshready;
         private readonly Chunk[] neighbors;
         private readonly Block[] blocks;
         private readonly byte[] metadata;
@@ -87,23 +91,15 @@ namespace SurviveCore.World {
         }
 
         public override void Update() {
-            if(shouldBeMeshed())
+            if(meshready)
                 world.QueueChunkForRemesh(this);
         }
 
-        private bool shouldBeMeshed() {
-            if (renderedblocks == 0)
-                return false;
-            //for (int i = 0; i < 6; i++) {
-            //    if (neighbors[i] == BorderChunk.Instance)
-            //        return false;
-            //}
-            return true;
+        public void SetMeshUpdates(bool enabled) {
+            meshready = enabled;
         }
         
         public override bool RegenerateMesh(ChunkMesher mesher) {
-            if (!shouldBeMeshed())
-                return false;
             Mesh m = mesher.GenerateMesh(this);
             if (m == null && renderer == null)
                 return true;
@@ -129,10 +125,19 @@ namespace SurviveCore.World {
             world = null;
         }
 
+        public override bool IsFull() {
+            return renderedblocks == 1 << (BPC * 3);
+        }
+
+        public override bool isEmpty() {
+            return renderedblocks == 0;
+        }
+
         private void SetUp(ChunkLocation l, BlockWorld world) {
             location = l;
             this.world = world;
             renderedblocks = 0;
+            meshready = false;
             for (int i = 0; i < blocks.Length; i++)
                 blocks[i] = Blocks.Air;
             for (int i = 0; i < metadata.Length; i++)
@@ -235,6 +240,13 @@ namespace SurviveCore.World {
         }
 
         public override void CleanUp() { }
+        public override bool IsFull() {
+            return true;
+        }
+
+        public override bool isEmpty() {
+            return true;
+        }
 
         public override Chunk GetNeightbor(int d) {
             return this;
