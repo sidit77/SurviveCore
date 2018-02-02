@@ -50,7 +50,7 @@ namespace SurviveCore.World {
         }
 
         public override int GetHashCode() {
-            return (x << 2) ^ (y << 1) ^ z;
+            return (x * 1619) ^ (y * 31337) ^ (z * 6971);
         }
 
         public override string ToString() {

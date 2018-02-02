@@ -75,6 +75,7 @@ namespace SurviveCore {
                 }
                 if (!ea.IsRepeat && ea.Key == Key.Space) {
                     //velocity += 1;
+                    Console.WriteLine(ChunkLocation.FromPos(camera.Position));
                 }
             };
             MouseDown += (sender, ea) => {

@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Numerics;
-using System.Threading;
 using Priority_Queue;
 using SurviveCore.OpenGL.Helper;
 using SurviveCore.World.Rendering;
 using SurviveCore.World.Utils;
+using Vector3 = System.Numerics.Vector3;
 
 namespace SurviveCore.World {
 
@@ -29,8 +28,9 @@ namespace SurviveCore.World {
         private readonly ObjectPool<ChunkRenderer> rendererPool;
         private readonly Queue<ChunkLocation> meshUpdateQueue;
         private readonly Dictionary<ChunkLocation, Chunk> chunkMap;
-        private readonly ChunkQueue chunkLoadQueue;
+        private readonly SimplePriorityQueue<ChunkLocation, int> chunkLoadQueue;
         private readonly Stack<Chunk> chunkUnloadStack;
+	    private readonly HashSet<ChunkLocation> currentlyLoading;
         
         private delegate void OnDraw(Frustum f);
 
@@ -40,8 +40,9 @@ namespace SurviveCore.World {
             rendererPool = new ObjectPool<ChunkRenderer>(RendererPoolSize);
             meshUpdateQueue = new Queue<ChunkLocation>();
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
-            chunkLoadQueue = new ChunkQueue();
+            chunkLoadQueue = new SimplePriorityQueue<ChunkLocation, int>();
             chunkUnloadStack = new Stack<Chunk>();
+	        currentlyLoading = new HashSet<ChunkLocation>();
             
             mesher = new ChunkMesher();
 
@@ -128,8 +129,13 @@ namespace SurviveCore.World {
 			    for (int z = -LoadDistance; z <= LoadDistance; z++) {
 				    for (int y = 0; y < Height; y++) {
 					    ChunkLocation l = new ChunkLocation(centerX + x,y, centerZ + z);
-					    if (GetDistanceSquared(l) <= LoadDistance * LoadDistance && !chunkMap.ContainsKey(l))
-						    chunkLoadQueue.Enqueue(GetDistanceSquared(l, true), l);
+					    if (GetDistanceSquared(l) <= LoadDistance * LoadDistance && !currentlyLoading.Contains(l) && !chunkMap.ContainsKey(l)) {
+						    if (chunkLoadQueue.Contains(l)) {
+							    chunkLoadQueue.TryUpdatePriority(l, GetDistanceSquared(l, true));
+						    }else {
+							 	chunkLoadQueue.Enqueue(l, GetDistanceSquared(l, true));   
+						    }
+					    }
 				    }
 			    }
 		    }
@@ -147,6 +153,7 @@ namespace SurviveCore.World {
 		        if(GetDistanceSquared(l) > UnloadDistance * UnloadDistance) 
 			        continue;
 
+		        currentlyLoading.Add(l);
 		        
 		        WorldChunk chunk = WorldChunk.CreateWorldChunk(l, this);
 			        
@@ -156,7 +163,7 @@ namespace SurviveCore.World {
 			        chunk.SetNeighbor(d, GetChunk(l.GetAdjecent(d)));
 		        chunk.SetMeshUpdates(true);
 		        chunkMap.Add(l, chunk);
-		        chunkLoadQueue.Remove(l);
+		        currentlyLoading.Remove(l);
 		        i--;
 	        }
         }
@@ -202,40 +209,6 @@ namespace SurviveCore.World {
                 rendererPool.Get().Dispose();
         }
 
-
-	    private class ChunkQueue {
-
-		    private readonly SimplePriorityQueue<ChunkLocation, int> items = new SimplePriorityQueue<ChunkLocation, int>();
-		    private readonly HashSet<ChunkLocation> hashSet = new HashSet<ChunkLocation>();
-
-		    public int Count => items.Count;
-
-		    public void Enqueue(int distance, ChunkLocation pos) {
-			    if (hashSet.Contains(pos)) {
-				    items.TryUpdatePriority(pos, distance);
-			    }else {
-				    items.Enqueue(pos, distance);
-				    hashSet.Add(pos);
-			    }
-		    }
-
-		    public ChunkLocation Dequeue() {
-			    return items.Dequeue();
-		    }
-
-		    public void Remove(ChunkLocation pos) {
-			    hashSet.Remove(pos);
-		    }
-
-		    public bool Contains(ChunkLocation pos) {
-			    return hashSet.Contains(pos);
-		    }
-
-		    public void Clear() {
-			    items.Clear();
-			    hashSet.Clear();
-		    }
-	    }
     }
 
 }
