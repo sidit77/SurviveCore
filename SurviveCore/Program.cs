@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using OpenTK;
+using OpenTK.Graphics.OpenGL;
 
 namespace SurviveCore {
 
@@ -18,10 +21,19 @@ namespace SurviveCore {
                 game.VSync = VSyncMode.Adaptive;
                 game.X = (DisplayDevice.GetDisplay(DisplayIndex.Default).Width - game.Width) / 2;
                 game.Y = (DisplayDevice.GetDisplay(DisplayIndex.Default).Height - game.Height) / 2;
-                game.WindowState = WindowState.Maximized;
             
                 game.Run(120);
             }
+        }
+
+        private static async void  Test() {
+            await Task.Run(() => {
+                Thread.Sleep(2000);
+                Console.WriteLine("2: " + Thread.CurrentThread.ManagedThreadId);
+            });
+
+            Console.WriteLine("3: " + Thread.CurrentThread.ManagedThreadId);
+
         }
 
     }

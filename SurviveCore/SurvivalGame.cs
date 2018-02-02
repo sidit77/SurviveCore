@@ -134,12 +134,12 @@ namespace SurviveCore {
             }else {
                 camera.Position += movement;
             }
-
+            
             slot = Math.Abs(Mouse.Wheel / 2 % inventory.Length);
 
-            Title = (ChunkRenderer.time / Math.Max(1, ChunkRenderer.number)) + " - Block: " + inventory[slot].Name;
+            Title = "Block: " + inventory[slot].Name;
             
-            world.Recenter((int)Math.Floor(camera.Position.X / 16), (int)Math.Floor(camera.Position.Z / 16));
+            world.Update((int)Math.Floor(camera.Position.X) >> Chunk.BPC, (int)Math.Floor(camera.Position.Z) >> Chunk.BPC);
 
             base.OnUpdateFrame(e);
         }
@@ -170,8 +170,8 @@ namespace SurviveCore {
             bool y = CanMoveTo(pos + new Vector3(0, mov.Y, 0));
             bool z = CanMoveTo(pos + new Vector3(0, 0, mov.Z));
 
-            if (!CanMoveTo(pos + new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0)))
-                Console.WriteLine("Error");
+            //if (!CanMoveTo(pos + new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0)))
+            //    Console.WriteLine("Error");
             return pos + new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0); 
         }
 

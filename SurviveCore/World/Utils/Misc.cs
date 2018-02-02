@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Numerics;
 
-namespace SurviveCore.World {
+namespace SurviveCore.World.Utils {
     
     static class Direction {
         public const int PositiveY = 1;

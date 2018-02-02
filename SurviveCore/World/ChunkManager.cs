@@ -1,33 +1,24 @@
-﻿using SurviveCore.World.Rendering;
+﻿namespace SurviveCore.World {
 
-namespace SurviveCore.World {
+    class WorldGenerator {
 
-    class ChunkManager {
+        private readonly FastNoise fn;
 
-        public static WorldChunk GetEmptyChunk() {
-            WorldChunk chunk = new WorldChunk();
-            int i = 0;
-            for (int bx = 0; bx < Chunk.Size; bx++) {
-                for (int by = 0; by < Chunk.Size; by++) {
-                    for (int bz = 0; bz < Chunk.Size; bz++) {
-                        i++;
-                        chunk.SetBlockDirect(bx, by, bz, (i % 50 == 0) ? Blocks.Stone : Blocks.Air);
-                    }
-                }
-            }
-            //chunk.SetBlockDirect(8, 8, 8, Blocks.Bricks);
-            return chunk;
+        public WorldGenerator(int seed) {
+            fn = new FastNoise(seed);
         }
-
-        public static WorldChunk GetChunk(int x, int y, int z, FastNoise fn) {
+        
+        public void FillChunk(Chunk chunk) {
             float[,,] noisecache = new float[Chunk.Size, Chunk.Size + 1, Chunk.Size];
 
-            WorldChunk chunk = new WorldChunk();
-
+            int x = chunk.Location.X << Chunk.BPC;
+            int y = chunk.Location.Y << Chunk.BPC;
+            int z = chunk.Location.Z << Chunk.BPC;
+            
             for(int bx = 0; bx < Chunk.Size; bx++) {
                 for(int by = 0; by < Chunk.Size + 1; by++) {
                     for(int bz = 0; bz < Chunk.Size; bz++) {
-                        noisecache[bx, by, bz] = 0.5f - ((float)(y * Chunk.Size + by) / 40) + fn.GetSimplexFractal(x * WorldChunk.Size + bx, y * WorldChunk.Size + by, z * WorldChunk.Size + bz);
+                        noisecache[bx, by, bz] = 0.5f - ((float)(y + by) / 40) + fn.GetSimplexFractal(x + bx, y + by, z + bz);
                     }
                 }
             }
@@ -39,20 +30,10 @@ namespace SurviveCore.World {
                     }
                 }
             }
-            
-            return chunk;
         }
-
-        public static ChunkRenderer[] GetChunkRenderer(int x, int z, FastNoise noise) {
-            ChunkRenderer[] chunks = new ChunkRenderer[BlockWorld.Height];
-            for (int i = 0; i < chunks.Length; i++) {
-                chunks[i] = new ChunkRenderer(x, i, z, GetChunk(x, i, z, noise));
-                if (i > 0)
-                    chunks[i].Chunk.SetNeighbor(Direction.NegativeY, chunks[i - 1].Chunk);
-            }
-            return chunks;
-        }
-
+        
     }
-
+   
+    
+    
 }

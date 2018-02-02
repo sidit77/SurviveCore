@@ -1,15 +1,15 @@
-﻿using System;
+﻿using SurviveCore.World.Rendering;
+using SurviveCore.World.Utils;
 
 namespace SurviveCore.World {
 
     abstract class Chunk {
 
-        // ReSharper disable once InconsistentNaming
         public const int BPC = 4;
         public const int Size = 1 << BPC;
 
-        public event EventHandler ChunkUpdate;
-
+        protected ChunkLocation location;
+        
         public abstract Chunk FindChunk(ref int x, ref int y, ref int z);
         public abstract void SetNeighbor(int d, Chunk c, bool caller = true);
         public abstract Chunk GetNeightbor(int d);
@@ -18,9 +18,10 @@ namespace SurviveCore.World {
         public abstract bool SetBlockDirect(int x, int y, int z, Block block);
         public abstract byte GetMetaDataDirect(int x, int y, int z);
         public abstract bool SetMetaDataDirect(int x, int y, int z, byte data);
-
-        public abstract void Delete();
-
+        public abstract void Update();
+        public abstract bool RegenerateMesh(ChunkMesher m);
+        public abstract void CleanUp();
+        
         public virtual bool SetBlockDirect(int x, int y, int z, Block block, byte meta) {
             return SetBlockDirect(x, y, z, block) && SetMetaDataDirect(x, y, z, meta);
         }
@@ -39,26 +40,44 @@ namespace SurviveCore.World {
         public virtual bool SetBlock(int x, int y, int z, Block block, byte meta) {
             return FindChunk(ref x, ref y, ref z).SetBlockDirect(x, y, z, block, meta);
         }
-        public virtual void Update() {
-            ChunkUpdate?.Invoke(this, EventArgs.Empty);
+
+        public ChunkLocation Location => location;
+
+        public override bool Equals(object obj) {
+            Chunk o = obj as Chunk;
+            return 0 != null && o.location.Equals(location);
         }
 
+        public override int GetHashCode() {
+            return location.GetHashCode();
+        }
     }
 
     class WorldChunk : Chunk {
 
+        private static readonly ObjectPool<WorldChunk> pool = new ObjectPool<WorldChunk>(256);
+
+        public static WorldChunk CreateWorldChunk(ChunkLocation l, BlockWorld w) {
+            WorldChunk c = pool.Get();
+            c.SetUp(l, w);
+            return c;
+        }
+
+        private int renderedblocks;
         private readonly Chunk[] neighbors;
         private readonly Block[] blocks;
         private readonly byte[] metadata;
+        private ChunkRenderer renderer;
+        private BlockWorld world;
 
-        public WorldChunk() {
+        public WorldChunk(){
             neighbors = new Chunk[]{BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance};
             blocks = new Block[Size * Size * Size];
             metadata = new byte[Size * Size * Size];
         }
 
         public override void SetNeighbor(int d, Chunk c, bool caller = true) {
-            if(neighbors[d] != c) {
+            if(neighbors[d] != c && c != BorderChunk.Instance) {
                 Update();
             }
             neighbors[d] = c;
@@ -67,10 +86,57 @@ namespace SurviveCore.World {
             }
         }
 
-        public override void Delete() {
+        public override void Update() {
+            if(shouldBeMeshed())
+                world.QueueChunkForRemesh(this);
+        }
+
+        private bool shouldBeMeshed() {
+            if (renderedblocks == 0)
+                return false;
+            //for (int i = 0; i < 6; i++) {
+            //    if (neighbors[i] == BorderChunk.Instance)
+            //        return false;
+            //}
+            return true;
+        }
+        
+        public override bool RegenerateMesh(ChunkMesher mesher) {
+            if (!shouldBeMeshed())
+                return false;
+            Mesh m = mesher.GenerateMesh(this);
+            if (m == null && renderer == null)
+                return true;
+            if(m != null && renderer == null)
+                renderer = world.CreateChunkRenderer(this);
+            if(m != null)
+                renderer.Update(m);
+            renderer?.SetActive(m != null);
+            return true;
+        }
+
+        public override void CleanUp() {
             for(int i = 0; i < 6; i++) {
                 neighbors[i].SetNeighbor((i + 3) % 6, BorderChunk.Instance, false);
+                neighbors[i] = BorderChunk.Instance;
             }
+            if (renderer != null) {
+                world.DisposeChunkRenderer(renderer);
+                renderer = null;
+            }
+        
+            pool.Add(this);
+            world = null;
+        }
+
+        private void SetUp(ChunkLocation l, BlockWorld world) {
+            location = l;
+            this.world = world;
+            renderedblocks = 0;
+            for (int i = 0; i < blocks.Length; i++)
+                blocks[i] = Blocks.Air;
+            for (int i = 0; i < metadata.Length; i++)
+                metadata[i] = 0;
         }
 
         public override Chunk GetNeightbor(int d) {
@@ -78,24 +144,28 @@ namespace SurviveCore.World {
         }
 
         public override Block GetBlockDirect(int x, int y, int z) {
-            return blocks[x + (y << BPC) + (z << 2 * BPC)];
+            return blocks[x | (y << BPC) | (z << 2 * BPC)];
         }
 
         public override bool SetBlockDirect(int x, int y, int z, Block block) {
             Block pre = GetBlockDirect(x, y, z);
-            blocks[x + (y << BPC) + (z << 2 * BPC)] = block;
+            blocks[x | (y << BPC) | (z << 2 * BPC)] = block;
             if(pre != block)
                 CallChunkUpdate(x, y, z);
+            if( pre.IsUnrendered && !block.IsUnrendered)
+                renderedblocks++;
+            if(!pre.IsUnrendered &&  block.IsUnrendered)
+                renderedblocks--;
             return true;
         }
 
         public override byte GetMetaDataDirect(int x, int y, int z) {
-            return metadata[x + (y << BPC) + (z << 2 * BPC)];
+            return metadata[x | (y << BPC) | (z << 2 * BPC)];
         }
 
         public override bool SetMetaDataDirect(int x, int y, int z, byte data) {
             int pre = GetMetaDataDirect(x, y, z);
-            metadata[x + (y << BPC) + (z << 2 * BPC)] = data;
+            metadata[x | (y << BPC) | (z << 2 * BPC)] = data;
             if(pre != data)
                 CallChunkUpdate(x, y, z);
             return true;
@@ -146,7 +216,7 @@ namespace SurviveCore.World {
             if(z == Size - 1)
                 neighbors[Direction.PositiveZ].Update();
         }
-
+        
     }
 
     class BorderChunk : Chunk {
@@ -154,10 +224,17 @@ namespace SurviveCore.World {
 
 
         private static readonly Block Border = new BorderBlock();
-        private BorderChunk() { }
         
         public override void SetNeighbor(int d, Chunk c, bool caller = true) { }
-        public override void Delete() { }
+        public override void Update() {
+            
+        }
+
+        public override bool RegenerateMesh(ChunkMesher m) {
+            return false;
+        }
+
+        public override void CleanUp() { }
 
         public override Chunk GetNeightbor(int d) {
             return this;
