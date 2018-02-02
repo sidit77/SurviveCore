@@ -1,16 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace SurviveCore.World.Utils {
     
-    public class ObjectPool<T> where T : new(){
+    public class ObjectPool<T>{
 
-        private int size;
-        private Stack<T> objects;
+        private readonly int size;
+        private readonly Stack<T> objects;
+        private readonly Func<T> constructor;
 
         public int Count => objects.Count;
         
-        public ObjectPool(int size) {
+        public ObjectPool(int size, Func<T> constructor) {
             this.size = size;
+            this.constructor = constructor;
             objects = new Stack<T>(size);
         }
 
@@ -22,7 +25,7 @@ namespace SurviveCore.World.Utils {
         }
 
         public T Get() {
-            return objects.Count > 0 ? objects.Pop() : new T();
+            return objects.Count > 0 ? objects.Pop() : constructor();
         }
         
     }

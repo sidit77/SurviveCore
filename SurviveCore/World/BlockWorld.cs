@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 using Priority_Queue;
 using SurviveCore.OpenGL.Helper;
 using SurviveCore.World.Rendering;
@@ -10,20 +12,22 @@ using SurviveCore.World.Utils;
 
 namespace SurviveCore.World {
 
-    class BlockWorld : IDisposable{
+    class BlockWorld : IDisposable {
 
-        private const int RendererPoolSize = 256;
-        
-        public const int Height = 8;
-        public const int LoadDistance = 12;
-	    public const int UnloadDistance = LoadDistance + 1;
+	    private const bool debuginfo = true;
+	    private const int RendererPoolSize = 256;
+	    private const int MaxLoadTasks = 30;
+	    private const int MaxUpdateTime = 5;
+        private const int Height = 8;
+        private const int LoadDistance = 12;
+	    private const int UnloadDistance = LoadDistance + 1;
 
-        private readonly ChunkMesher mesher;
         
         private int centerX;
 	    private int centerZ;
 
-	    private readonly WorldGenerator generator;
+	    private readonly IWorldGenerator generator;
+	    private readonly ChunkMesher mesher;
 
         private readonly ObjectPool<ChunkRenderer> rendererPool;
         private readonly Queue<ChunkLocation> meshUpdateQueue;
@@ -31,26 +35,32 @@ namespace SurviveCore.World {
         private readonly SimplePriorityQueue<ChunkLocation, int> chunkLoadQueue;
         private readonly Stack<Chunk> chunkUnloadStack;
 	    private readonly HashSet<ChunkLocation> currentlyLoading;
+	    private readonly ConcurrentQueue<WorldChunk> loadedChunks;
         
         private delegate void OnDraw(Frustum f);
-
         private event OnDraw DrawEvent;
-        
+
+	    private readonly Stopwatch updateTimer;
+	    private readonly Stopwatch debugTimer;
+	    private int averageChunkUpdates;
+	    
         public BlockWorld() {
-            rendererPool = new ObjectPool<ChunkRenderer>(RendererPoolSize);
+            rendererPool = new ObjectPool<ChunkRenderer>(RendererPoolSize, () => new ChunkRenderer());
             meshUpdateQueue = new Queue<ChunkLocation>();
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
             chunkLoadQueue = new SimplePriorityQueue<ChunkLocation, int>();
             chunkUnloadStack = new Stack<Chunk>();
 	        currentlyLoading = new HashSet<ChunkLocation>();
+	        loadedChunks = new ConcurrentQueue<WorldChunk>();
             
             mesher = new ChunkMesher();
-
-            generator = new WorldGenerator((int)Stopwatch.GetTimestamp());
+            generator = new DefaultWorldGenerator((int)Stopwatch.GetTimestamp());
+	        
+	        updateTimer = new Stopwatch();
+	        debugTimer = new Stopwatch();
+	        debugTimer.Start();
 	        
 	        UpdateChunkQueues();
-	        
-            t.Start();
 	        
         }
 
@@ -59,7 +69,7 @@ namespace SurviveCore.World {
         }
 
         public void Update(int cx, int cz) {
-            
+            updateTimer.Restart();
             if(centerX != cx || centerZ != cz) {
 	            
                 centerX = cx;
@@ -71,17 +81,18 @@ namespace SurviveCore.World {
 	        LoadChunks();
             MeshChunks();
 
-	        if (t.ElapsedMilliseconds >= 1000) {
+	        if (debuginfo && debugTimer.ElapsedMilliseconds >= 250) {
 		        Console.WriteLine("");
 		        Console.WriteLine("Loaded Chunks: {0}", chunkMap.Count);
 		        Console.WriteLine("Loading Queue: {0}", chunkLoadQueue.Count);
+		        Console.WriteLine("Loading Tasks: {0}", currentlyLoading.Count);
+		        Console.WriteLine("Meshing Queue: {0}", meshUpdateQueue.Count);
+		        Console.WriteLine("Average Meshs: {0}", averageChunkUpdates);
 		        Console.WriteLine("ChunkRenderer: {0}", DrawEvent?.GetInvocationList().Length);
-		        t.Restart();
+		        debugTimer.Restart();
 	        }
 	        
         }
-
-	    private Stopwatch t = new Stopwatch();
 	    
         public Block GetBlock(int x, int y, int z) {
 	        ChunkLocation l = ChunkLocation.FromPos(x, y, z);
@@ -146,8 +157,7 @@ namespace SurviveCore.World {
 	    }
 	    
         private void LoadChunks() {
-	        int i = 5;
-	        while (i > 0 && chunkLoadQueue.Count > 0) {
+	        while (currentlyLoading.Count <= MaxLoadTasks && chunkLoadQueue.Count > 0) {
 		        ChunkLocation l = chunkLoadQueue.Dequeue();
 		        
 		        if(GetDistanceSquared(l) > UnloadDistance * UnloadDistance) 
@@ -156,16 +166,22 @@ namespace SurviveCore.World {
 		        currentlyLoading.Add(l);
 		        
 		        WorldChunk chunk = WorldChunk.CreateWorldChunk(l, this);
-			        
-		        generator.FillChunk(chunk);
 
-		        for (int d = 0; d < 6; d++)
-			        chunk.SetNeighbor(d, GetChunk(l.GetAdjecent(d)));
-		        chunk.SetMeshUpdates(true);
-		        chunkMap.Add(l, chunk);
-		        currentlyLoading.Remove(l);
-		        i--;
+		        Task.Run(() => {
+			        generator.FillChunk(chunk);
+			        loadedChunks.Enqueue(chunk);
+		        });
 	        }
+
+	        while(!loadedChunks.IsEmpty) {
+		        loadedChunks.TryDequeue(out WorldChunk chunk);
+		        for (int d = 0; d < 6; d++)
+			        chunk.SetNeighbor(d, GetChunk(chunk.Location.GetAdjecent(d)));
+		        chunk.SetMeshUpdates(true);
+		        chunkMap.Add(chunk.Location, chunk);
+		        currentlyLoading.Remove(chunk.Location);
+	        }
+	        
         }
 
         private void UnloadChunks() {
@@ -179,11 +195,17 @@ namespace SurviveCore.World {
         }
         
         private void MeshChunks() {
-            int i = 5;
-            while (meshUpdateQueue.Count > 0 && i > 0) {
-                if(chunkMap.TryGetValue(meshUpdateQueue.Dequeue(), out Chunk c) && c.RegenerateMesh(mesher))
-                    i--;
+	        int i = 0;
+            while (meshUpdateQueue.Count > 0) {
+	            if (chunkMap.TryGetValue(meshUpdateQueue.Dequeue(), out Chunk c))
+		            c.RegenerateMesh(mesher);
+	            i++;
+				if(updateTimer.ElapsedMilliseconds >= MaxUpdateTime)
+					break;
             }
+
+	        averageChunkUpdates += i;
+	        averageChunkUpdates /= 2;
         }
 
 	    private Chunk GetChunk(ChunkLocation l) {

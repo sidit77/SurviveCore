@@ -1,15 +1,25 @@
-﻿namespace SurviveCore.World {
+﻿using System;
 
-    class WorldGenerator {
+namespace SurviveCore.World {
+
+    interface IWorldGenerator {
+        void FillChunk(Chunk chunk);
+    }
+    
+    class DefaultWorldGenerator : IWorldGenerator{
 
         private readonly FastNoise fn;
 
-        public WorldGenerator(int seed) {
+        [ThreadStatic]
+        private static float[,,] noisecache;
+        
+        public DefaultWorldGenerator(int seed) {
             fn = new FastNoise(seed);
         }
         
         public void FillChunk(Chunk chunk) {
-            float[,,] noisecache = new float[Chunk.Size, Chunk.Size + 1, Chunk.Size];
+            if (noisecache == null)
+                noisecache = new float[Chunk.Size, Chunk.Size + 1, Chunk.Size];
 
             int x = chunk.Location.X << Chunk.BPC;
             int y = chunk.Location.Y << Chunk.BPC;
@@ -30,6 +40,7 @@
                     }
                 }
             }
+
         }
         
     }

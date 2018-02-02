@@ -56,7 +56,7 @@ namespace SurviveCore.World {
 
     class WorldChunk : Chunk {
 
-        private static readonly ObjectPool<WorldChunk> pool = new ObjectPool<WorldChunk>(256);
+        private static readonly ObjectPool<WorldChunk> pool = new ObjectPool<WorldChunk>(256, () => new WorldChunk());
 
         public static WorldChunk CreateWorldChunk(ChunkLocation l, BlockWorld w) {
             WorldChunk c = pool.Get();
