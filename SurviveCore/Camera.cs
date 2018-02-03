@@ -4,7 +4,6 @@ using System.Numerics;
 namespace SurviveCore {
     class Camera {
 
-        public Matrix4x4 ViewMatrix;
         public Matrix4x4 CameraMatrix;
 
         private Quaternion rotation;
@@ -29,7 +28,6 @@ namespace SurviveCore {
             Matrix4x4 rotationM = Matrix4x4.CreateFromQuaternion(rotation);
             Matrix4x4 positionM = Matrix4x4.CreateTranslation(-position);
             CameraMatrix = positionM * rotationM * perspectiveM;
-            ViewMatrix = rotationM * perspectiveM;
         }
 
         public Quaternion Rotation {

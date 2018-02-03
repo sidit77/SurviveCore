@@ -49,7 +49,7 @@ namespace SurviveCore {
 
             Console.WriteLine(GL.GetError());
 
-            camera = new Camera(75f * (float)Math.PI / 180, (float)Width / (float)Height, 0.1f, 250.0f) {
+            camera = new Camera(75f * (float)Math.PI / 180, (float)Width / (float)Height, 0.1f, 270.0f) {
                 Position = new Vector3(8, 50, 8)
             };
             frustum = new Frustum(camera.CameraMatrix);
@@ -223,6 +223,8 @@ namespace SurviveCore {
             aoTexture.Bind(TextureUnit.Texture1);
             program.Bind();
             program.SetUniform("mvp", false, ref camera.CameraMatrix);
+            program.SetUniform("fog_color", Color4.DarkSlateGray);
+            program.SetUniform("enable_fog", Keyboard[Key.F4] ? 0 : 1);
             program.SetUniform("pos", camera.Position);
             program.SetUniform("ao", Keyboard[Key.F3] ? 0 : 1);
             world.Draw(frustum);
