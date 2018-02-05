@@ -16,6 +16,7 @@ namespace SurviveCore {
             
         }
 
+        private Settings settings;
         private ShaderProgram program;
         private ShaderProgram hudprogram;
         private Texture texture;
@@ -49,12 +50,13 @@ namespace SurviveCore {
 
             Console.WriteLine(GL.GetError());
 
-            camera = new Camera(75f * (float)Math.PI / 180, (float)Width / (float)Height, 0.1f, 270.0f) {
+            camera = new Camera(75f * (float)Math.PI / 180, (float)Width / (float)Height, 0.1f, 300.0f) {
                 Position = new Vector3(8, 50, 8)
             };
             frustum = new Frustum(camera.CameraMatrix);
             
             world = new BlockWorld();
+            settings = new Settings();
 
             Resize += (sender, ea) => {
                 GL.Viewport(0, 0, Width, Height);
@@ -74,8 +76,22 @@ namespace SurviveCore {
                     CursorVisible = true;
                 }
                 if (!ea.IsRepeat && ea.Key == Key.Space) {
-                    //velocity += 1;
                     Console.WriteLine(ChunkLocation.FromPos(camera.Position));
+                }
+                if (!ea.IsRepeat && ea.Key == Key.F1) {
+                    settings.ToggleUpdateCamera();
+                }
+                if (!ea.IsRepeat && ea.Key == Key.F2) {
+                    settings.ToggleWireframe();
+                }
+                if (!ea.IsRepeat && ea.Key == Key.F3) {
+                    settings.ToggleAmbientOcclusion();
+                }
+                if (!ea.IsRepeat && ea.Key == Key.F4) {
+                    settings.ToggleFog();
+                }
+                if (!ea.IsRepeat && ea.Key == Key.F5) {
+                    settings.TogglePhysics();
                 }
             };
             MouseDown += (sender, ea) => {
@@ -130,7 +146,7 @@ namespace SurviveCore {
             if(Keyboard[Key.D]) movement += camera.Right;
             movement *= (Keyboard[Key.ShiftLeft] ? 60 : 10) * (float)e.Time;
 
-            if(!Keyboard[Key.AltLeft]) {
+            if(settings.Physics) {
                 camera.Position = ClampToWorld(camera.Position, movement);
             }else {
                 camera.Position += movement;
@@ -140,7 +156,8 @@ namespace SurviveCore {
 
             Title = "Block: " + inventory[slot].Name;
             
-            world.Update((int)Math.Floor(camera.Position.X) >> Chunk.BPC, (int)Math.Floor(camera.Position.Z) >> Chunk.BPC);
+            if(settings.UpdateCamera)
+                world.Update((int)Math.Floor(camera.Position.X) >> Chunk.BPC, (int)Math.Floor(camera.Position.Z) >> Chunk.BPC);
 
             base.OnUpdateFrame(e);
         }
@@ -205,12 +222,12 @@ namespace SurviveCore {
 
         protected override void OnRenderFrame(OpenTK.FrameEventArgs e) {
             camera.Update();
-            if(!Keyboard[Key.F1])
+            if(settings.UpdateCamera)
                 frustum.Update(camera.CameraMatrix);
 
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            if(Keyboard[Key.F2]) {
+            if(settings.Wireframe) {
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
                 GL.Disable(EnableCap.CullFace);
             }else{
@@ -224,9 +241,9 @@ namespace SurviveCore {
             program.Bind();
             program.SetUniform("mvp", false, ref camera.CameraMatrix);
             program.SetUniform("fog_color", Color4.DarkSlateGray);
-            program.SetUniform("enable_fog", Keyboard[Key.F4] ? 0 : 1);
+            program.SetUniform("enable_fog", settings.Fog ? 1 : 0);
             program.SetUniform("pos", camera.Position);
-            program.SetUniform("ao", Keyboard[Key.F3] ? 0 : 1);
+            program.SetUniform("ao", settings.AmbientOcclusion ? 1 : 0);
             world.Draw(frustum);
 
             hudprogram.Bind();

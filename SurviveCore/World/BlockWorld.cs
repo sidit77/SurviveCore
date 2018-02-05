@@ -15,12 +15,12 @@ namespace SurviveCore.World {
     class BlockWorld : IDisposable {
 
 	    private const bool debuginfo = false;
-	    private const int RendererPoolSize = 256;
-	    private const int MaxLoadTasks = 30;
-	    private const int MaxUpdateTime = 5;
-        private const int Height = 8;
-        private const int LoadDistance = 16;
-	    private const int UnloadDistance = LoadDistance + 1;
+	    public const int RendererPoolSize = 256;
+	    public const int MaxLoadTasks = 30;
+	    public const int MaxUpdateTime = 5;
+        public const int Height = 8;
+        public const int LoadDistance = 16;
+	    public const int UnloadDistance = LoadDistance + 1;
 
         
         private int centerX;

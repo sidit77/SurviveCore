@@ -72,7 +72,7 @@ namespace SurviveCore.World {
         private ChunkRenderer renderer;
         private BlockWorld world;
 
-        public WorldChunk(){
+        private WorldChunk(){
             neighbors = new Chunk[]{BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance};
             blocks = new Block[Size * Size * Size];
             metadata = new byte[Size * Size * Size];
