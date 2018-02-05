@@ -1,12 +1,18 @@
-﻿namespace SurviveCore {
-    
+﻿using OpenTK;
+
+namespace SurviveCore {
+
     public class Settings {
+
+        private static Settings settings;
+        public static Settings Instance => settings ?? (settings = new Settings());
 
         private bool wireframe;
         private bool fog;
         private bool ambientocclusion;
         private bool physics;
         private bool updatecamera;
+        private bool debuginfo;
 
         public Settings() {
             wireframe = false;
@@ -14,8 +20,14 @@
             ambientocclusion = true;
             physics = true;
             updatecamera = true;
+            debuginfo = false;
         }
         
+        public bool DebugInfo {
+            get => debuginfo;
+            set => debuginfo = value;
+        }
+
         public bool Wireframe {
             get => wireframe;
             set => wireframe = value;
@@ -41,6 +53,10 @@
             set => updatecamera = value;
         }
 
+        public void ToggleDebugInfo() {
+            debuginfo = !debuginfo;
+        }
+        
         public void ToggleWireframe() {
             wireframe = !wireframe;
         }

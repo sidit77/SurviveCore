@@ -14,7 +14,6 @@ namespace SurviveCore.World {
 
     class BlockWorld : IDisposable {
 
-	    private const bool debuginfo = false;
 	    public const int RendererPoolSize = 256;
 	    public const int MaxLoadTasks = 30;
 	    public const int MaxUpdateTime = 5;
@@ -77,11 +76,11 @@ namespace SurviveCore.World {
 	            
 	            UpdateChunkQueues();
             }
-	        UnloadChunks();
-	        LoadChunks();
-            MeshChunks();
+		    UnloadChunks();
+		    LoadChunks();
+		    MeshChunks();
 
-	        if (debuginfo && debugTimer.ElapsedMilliseconds >= 250) {
+	        if (Settings.Instance.DebugInfo && debugTimer.ElapsedMilliseconds >= 250) {
 		        Console.WriteLine("");
 		        Console.WriteLine("Loaded Chunks: {0}", chunkMap.Count);
 		        Console.WriteLine("Loading Queue: {0}", chunkLoadQueue.Count);
