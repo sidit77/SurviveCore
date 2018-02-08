@@ -12,7 +12,7 @@ using SurviveCore.World.Utils;
 
 namespace SurviveCore.World {
 
-    class BlockWorld : IDisposable {
+    public class BlockWorld : IDisposable {
 
 	    public const int RendererPoolSize = 256;
 	    public const int MaxLoadTasks = 30;

@@ -2,11 +2,11 @@
 
 namespace SurviveCore.World {
 
-    static class Blocks {
-        public readonly static Block Air = new AirBlock();
-        public readonly static Block Stone = new Block("Stone", "./Assets/Textures/Stone.png");
-        public readonly static Block Grass = new Block("Grass", "./Assets/Textures/Grass_Side.png").SetTexture(1, "./Assets/Textures/Grass_Top.png").SetTexture(4, "./Assets/Textures/Dirt.png");
-        public readonly static Block Bricks = new Block("Bricks", "./Assets/Textures/Bricks.png");
+    public static class Blocks {
+        public static readonly Block Air = new AirBlock();
+        public static readonly Block Stone = new Block("Stone", "./Assets/Textures/Stone.png");
+        public static readonly Block Grass = new Block("Grass", "./Assets/Textures/Grass_Side.png").SetTexture(1, "./Assets/Textures/Grass_Top.png").SetTexture(4, "./Assets/Textures/Dirt.png");
+        public static readonly Block Bricks = new Block("Bricks", "./Assets/Textures/Bricks.png");
 
         private class AirBlock : Block {
             public AirBlock() : base("Air") {
@@ -22,34 +22,42 @@ namespace SurviveCore.World {
         }
     }
 
-    class Block {
+    public class Block {
         
-        private static List<string> textures = new List<string>();
+        private static readonly List<string> textures = new List<string>();
+        private static readonly List<Block> blocks = new List<Block>();
         private static int GetTextureID(string path) {
             if (!textures.Contains(path))
                 textures.Add(path);
             return textures.IndexOf(path);
         }
-        public static string[] Textures {
-            get {
-                return textures.ToArray();
-            }
-        }
+        public static string[] Textures => textures.ToArray();
 
+        public static Block GetBlock(int id) {
+            return blocks[id];
+        }
+        
         private string name;
         private int[] textureids;
-
+        private int id;
+        
         public Block(string name) {
+            blocks.Add(this);
+            id = blocks.IndexOf(this);
             this.name = name;
             textureids = new [] { -1, -1, -1, -1, -1, -1 };
         }
-
+        
         public Block(string name, string texture) {
+            blocks.Add(this);
+            id = blocks.IndexOf(this);
             this.name = name;
             int texid = GetTextureID(texture);
             textureids = new []{texid, texid, texid, texid, texid, texid };
         }
 
+        public int ID => id;
+        
         public virtual Block SetTexture(int side, string texture) {
             textureids[side] = GetTextureID(texture);
             return this;

@@ -3,7 +3,7 @@ using SurviveCore.World.Utils;
 
 namespace SurviveCore.World {
 
-    abstract class Chunk {
+    public abstract class Chunk {
 
         public const int BPC = 4;
         public const int Size = 1 << BPC;

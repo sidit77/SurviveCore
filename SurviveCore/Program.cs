@@ -1,19 +1,12 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using OpenTK;
-using SurviveCore.World;
-using SurviveCore.World.Saving;
 
 namespace SurviveCore {
-    static class Program {
+    internal static class Program {
 
         [STAThread]
-        static void Main(string[] args) {
-            Trace.Listeners.Add(new ConsoleTraceListener());
-            
-            Trace.TraceInformation("Vector hardware acceleration: " + System.Numerics.Vector.IsHardwareAccelerated);
-            
+        private static void Main(string[] args) {
+            Console.WriteLine("Vector hardware acceleration: " + System.Numerics.Vector.IsHardwareAccelerated);
             using(var game = new SurvivalGame()) {
                 game.Title = "Test Game";
                 game.VSync = VSyncMode.Adaptive;
@@ -22,23 +15,6 @@ namespace SurviveCore {
             
                 game.Run(120);
             }
-            
-        }
-
-    }
-
-    class ConsoleTraceListener : TraceListener {
-
-        public ConsoleTraceListener() {
-            TraceOutputOptions = TraceOptions.None;
-        }
-
-        public override void Write(string message) {
-            Console.Write(message);
-        }
-
-        public override void WriteLine(string message) {
-            Console.WriteLine(message);
         }
 
     }

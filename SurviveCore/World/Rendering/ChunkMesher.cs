@@ -2,7 +2,7 @@
 
 namespace SurviveCore.World.Rendering {
     
-    class ChunkMesher {
+    public class ChunkMesher {
         
         private readonly List<float> vertices1;
         private readonly List<byte> vertices2;

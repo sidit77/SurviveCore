@@ -1,12 +1,11 @@
 ﻿using System;
 
 namespace SurviveCore.World {
-
-    interface IWorldGenerator {
+    public interface IWorldGenerator {
         void FillChunk(Chunk chunk);
     }
     
-    class DefaultWorldGenerator : IWorldGenerator{
+    public class DefaultWorldGenerator : IWorldGenerator{
 
         private readonly FastNoise fn;
 
@@ -45,6 +44,5 @@ namespace SurviveCore.World {
         
     }
    
-    
-    
 }
+

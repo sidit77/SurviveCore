@@ -4,7 +4,7 @@ using SurviveCore.World.Utils;
 
 namespace SurviveCore.World {
     
-    struct ChunkLocation {
+    public struct ChunkLocation {
 
         private readonly int x, y, z;
 

@@ -7,7 +7,7 @@ using OpenTK.Graphics.OpenGL4;
 
 namespace SurviveCore.OpenGL {
 
-    class ShaderProgram : IDisposable{
+    public class ShaderProgram : IDisposable{
 
         private static ShaderProgram current;
         public static ShaderProgram Current {
@@ -216,7 +216,7 @@ namespace SurviveCore.OpenGL {
 
     }
 
-    class Shader : IDisposable {
+    public class Shader : IDisposable {
 
         private readonly int id;
 
@@ -252,3 +252,4 @@ namespace SurviveCore.OpenGL {
     }
 
 }
+

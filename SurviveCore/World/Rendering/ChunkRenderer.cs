@@ -4,7 +4,7 @@ using SurviveCore.OpenGL.Helper;
 
 namespace SurviveCore.World.Rendering {
 
-    class ChunkRenderer : IDisposable {
+    public class ChunkRenderer : IDisposable {
 
         private Chunk chunk;
         private bool active;
@@ -14,7 +14,7 @@ namespace SurviveCore.World.Rendering {
         private readonly int vbo2;
         private int size;
 
-        public ChunkRenderer() {
+        internal ChunkRenderer() {
             vao = GL.GenVertexArray();
             vbo1 = GL.GenBuffer();
             vbo2 = GL.GenBuffer();

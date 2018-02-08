@@ -1,6 +1,4 @@
-﻿using OpenTK;
-
-namespace SurviveCore {
+﻿namespace SurviveCore {
 
     public class Settings {
 

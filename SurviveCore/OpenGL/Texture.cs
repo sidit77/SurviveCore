@@ -1,14 +1,14 @@
 ﻿using System;
 using System.IO;
-using ImageSharp;
 using OpenTK.Graphics.OpenGL4;
+using SixLabors.ImageSharp;
 
 namespace SurviveCore.OpenGL {
 
-    class Texture : IDisposable {
+    public class Texture : IDisposable {
 
-        private int id;
-        private TextureTarget target;
+        private readonly int id;
+        private readonly TextureTarget target;
 
         public Texture(TextureTarget target, int levels, SizedInternalFormat format, int width) : this(target) {
             GL.TextureStorage1D(id, levels, format, width);
@@ -106,7 +106,7 @@ namespace SurviveCore.OpenGL {
                 
 
                 //using (var imgdata = img.Lock()) {
-                    t.SetSubImage(0, 0, 0, img.Width, img.Height, PixelFormat.Bgra, PixelType.UnsignedByte, img.Pixels.AsBytes().ToArray());
+                    t.SetSubImage(0, 0, 0, img.Width, img.Height, PixelFormat.Bgra, PixelType.UnsignedByte, img.SavePixelData());
                 //}
 
                 t.SetFiltering(TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
@@ -125,7 +125,7 @@ namespace SurviveCore.OpenGL {
                 using(FileStream stream = File.OpenRead(paths[i]))
                 using(Image<Rgba32> img = Image.Load(stream))
                 //using(var imgdata = img.Lock()) {
-                    t.SetSubImage(0, 0, 0, i, img.Width, img.Height, 1, PixelFormat.Rgba, PixelType.UnsignedByte, img.Pixels.AsBytes().ToArray());
+                    t.SetSubImage(0, 0, 0, i, img.Width, img.Height, 1, PixelFormat.Rgba, PixelType.UnsignedByte, img.SavePixelData());
                 //}
             }
         

@@ -18,11 +18,10 @@
     <Compile Remove="World\ChunkTower.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ImageSharp" Version="1.0.0-alpha9-00194" />
+    <PackageReference Include="Microsoft.NETCore.App" Version="2.0.5" />
     <PackageReference Include="OpenTK.NETCore" Version="1.1.2749.6433" />
     <PackageReference Include="OptimizedPriorityQueue" Version="4.1.1" />
-    <PackageReference Include="System.Diagnostics.TraceSource" Version="4.3.0" />
-    <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0002" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Assets\AO.data">
@@ -64,5 +63,8 @@
     <None Update="Assets\Textures\TestTexture.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FastNoise\FastNoise.csproj" />
   </ItemGroup>
 </Project>

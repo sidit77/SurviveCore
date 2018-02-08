@@ -2,7 +2,7 @@
 
 namespace SurviveCore.OpenGL.Helper {
 
-    class Frustum {
+    public class Frustum {
 
         private readonly Plane[] planes;
 

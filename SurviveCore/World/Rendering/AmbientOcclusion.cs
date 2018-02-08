@@ -5,7 +5,7 @@ using OpenTK.Graphics.OpenGL4;
 using SurviveCore.OpenGL;
 
 namespace SurviveCore.World.Rendering {
-    class AmbientOcclusion {
+    internal static class AmbientOcclusion {
 
         public static Texture GetAOTexture2() {
             using(BinaryReader r = new BinaryReader(new FileStream("./Assets/Ao.data", FileMode.Open, FileAccess.Read), Encoding.UTF8, false)) {

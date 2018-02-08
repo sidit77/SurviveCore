@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Numerics;
+using OpenTK;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Input;
@@ -7,14 +7,15 @@ using SurviveCore.OpenGL;
 using SurviveCore.OpenGL.Helper;
 using SurviveCore.World;
 using SurviveCore.World.Rendering;
+using Quaternion = System.Numerics.Quaternion;
+using Vector2 = System.Numerics.Vector2;
+using Vector3 = System.Numerics.Vector3;
 
 namespace SurviveCore {
 
-    class SurvivalGame : OpenTK.GameWindow{
+    public class SurvivalGame : GameWindow{
 
-        public SurvivalGame() : base(1280, 720, GraphicsMode.Default, "Test Game", OpenTK.GameWindowFlags.Default , OpenTK.DisplayDevice.Default, 4, 5, GraphicsContextFlags.ForwardCompatible) {
-            
-        }
+        public SurvivalGame() : base(1280, 720, GraphicsMode.Default, "Test Game", GameWindowFlags.Default , DisplayDevice.Default, 4, 5, GraphicsContextFlags.ForwardCompatible) {}
 
         private ShaderProgram program;
         private ShaderProgram hudprogram;
@@ -60,60 +61,6 @@ namespace SurviveCore {
                 GL.Viewport(0, 0, Width, Height);
                 camera.Aspect = (float)Width / (float)Height;
             };
-            KeyDown += (sender, ea) => {
-                if(ea.IsRepeat)
-                    return;
-                switch (ea.Key) {
-                    case Key.F1:
-                        Settings.Instance.ToggleUpdateCamera();
-                        break;
-                    case Key.F2:
-                        Settings.Instance.ToggleWireframe();
-                        break;
-                    case Key.F3:
-                        Settings.Instance.ToggleAmbientOcclusion();
-                        break;
-                    case Key.F4:
-                        Settings.Instance.ToggleFog();
-                        break;
-                    case Key.F5:
-                        Settings.Instance.TogglePhysics();
-                        break;
-                    case Key.F6:
-                        Settings.Instance.ToggleDebugInfo();
-                        break;
-                    case Key.F11:
-                        WindowState = WindowState == OpenTK.WindowState.Fullscreen ? OpenTK.WindowState.Normal : OpenTK.WindowState.Fullscreen;
-                        Console.WriteLine(WindowState);
-                        break;
-                    case Key.F12:
-                        VSync = VSync == OpenTK.VSyncMode.Adaptive ? OpenTK.VSyncMode.Off : OpenTK.VSyncMode.Adaptive;
-                        Console.WriteLine(VSync);
-                        break;
-                    case Key.Escape:
-                        CursorVisible = true;
-                        break;
-                    case Key.Space:
-                        Console.WriteLine(ChunkLocation.FromPos(camera.Position));
-                        break;    
-                }
-            };
-            MouseDown += (sender, ea) => {
-                if (ea.Button == MouseButton.Left && !CursorVisible) {
-                    Vector3? intersection = FindIntersection(false);
-                    if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
-                    }
-                }
-                if (ea.Button == MouseButton.Right && !CursorVisible) {
-                    Vector3? intersection = FindIntersection(true);
-                    if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
-                        world.SetBlock(intersection.Value, Blocks.Air);
-                    }
-                }
-                if (ea.Button == MouseButton.Left &&  CursorVisible) {
-                    CursorVisible = false;
-                }
-            };
             GC.Collect();
             base.OnLoad(e);
         }
@@ -124,7 +71,7 @@ namespace SurviveCore {
 
         //private float velocity;
 
-        protected override void OnUpdateFrame(OpenTK.FrameEventArgs e) {
+        protected override void OnUpdateFrame(FrameEventArgs e) {
             Vector2 mousepos = Vector2.Zero;
             if(CursorVisible == false) {
                 MouseState ms = OpenTK.Input.Mouse.GetState();
@@ -160,8 +107,7 @@ namespace SurviveCore {
 
             Title = "Block: " + inventory[slot].Name;
             
-            if(Settings.Instance.UpdateCamera)
-                world.Update((int)Math.Floor(camera.Position.X) >> Chunk.BPC, (int)Math.Floor(camera.Position.Z) >> Chunk.BPC);
+            
 
             base.OnUpdateFrame(e);
         }
@@ -224,10 +170,12 @@ namespace SurviveCore {
             return null;
         }
 
-        protected override void OnRenderFrame(OpenTK.FrameEventArgs e) {
+        protected override void OnRenderFrame(FrameEventArgs e) {
             camera.Update();
             if(Settings.Instance.UpdateCamera)
                 frustum.Update(camera.CameraMatrix);
+            if(Settings.Instance.UpdateCamera)
+                world.Update((int)Math.Floor(camera.Position.X) >> Chunk.BPC, (int)Math.Floor(camera.Position.Z) >> Chunk.BPC);
 
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
@@ -255,6 +203,64 @@ namespace SurviveCore {
 
             base.OnRenderFrame(e);
             SwapBuffers();
+        }
+
+        protected override void OnKeyDown(KeyboardKeyEventArgs e) {
+            base.OnKeyDown(e);
+            if(e.IsRepeat)
+                return;
+            switch (e.Key) {
+                case Key.F1:
+                    Settings.Instance.ToggleUpdateCamera();
+                    break;
+                case Key.F2:
+                    Settings.Instance.ToggleWireframe();
+                    break;
+                case Key.F3:
+                    Settings.Instance.ToggleAmbientOcclusion();
+                    break;
+                case Key.F4:
+                    Settings.Instance.ToggleFog();
+                    break;
+                case Key.F5:
+                    Settings.Instance.TogglePhysics();
+                    break;
+                case Key.F6:
+                    Settings.Instance.ToggleDebugInfo();
+                    break;
+                case Key.F11:
+                    WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
+                    Console.WriteLine(WindowState);
+                    break;
+                case Key.F12:
+                    VSync = VSync == VSyncMode.Adaptive ? VSyncMode.Off : VSyncMode.Adaptive;
+                    Console.WriteLine(VSync);
+                    break;
+                case Key.Escape:
+                    CursorVisible = true;
+                    break;
+                case Key.Space:
+                    Console.WriteLine(ChunkLocation.FromPos(camera.Position));
+                    break;    
+            }
+        }
+
+        protected override void OnMouseDown(MouseButtonEventArgs e) {
+            base.OnMouseDown(e);
+            if (e.Button == MouseButton.Left && !CursorVisible) {
+                Vector3? intersection = FindIntersection(false);
+                if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
+                }
+            }
+            if (e.Button == MouseButton.Right && !CursorVisible) {
+                Vector3? intersection = FindIntersection(true);
+                if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
+                    world.SetBlock(intersection.Value, Blocks.Air);
+                }
+            }
+            if (e.Button == MouseButton.Left &&  CursorVisible) {
+                CursorVisible = false;
+            }
         }
 
         protected override void OnUnload(EventArgs e) {
