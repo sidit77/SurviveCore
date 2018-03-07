@@ -15,7 +15,7 @@ namespace SurviveCore {
 
     public class SurvivalGame : GameWindow{
 
-        public SurvivalGame() : base(1280, 720, GraphicsMode.Default, "Test Game", GameWindowFlags.Default , DisplayDevice.Default, 4, 5, GraphicsContextFlags.ForwardCompatible) {}
+        public SurvivalGame() : base(1280, 720, GraphicsMode.Default, "Test Game 2", GameWindowFlags.Default , DisplayDevice.Default, 4, 5, GraphicsContextFlags.ForwardCompatible) {}
 
         private ShaderProgram program;
         private ShaderProgram hudprogram;
