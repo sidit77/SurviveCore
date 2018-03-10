@@ -98,11 +98,11 @@ namespace SurviveCore.World {
         }
         
         public override bool RegenerateMesh(ChunkMesher mesher) {
-            Mesh m = mesher.GenerateMesh(this);
+            Vertex[] m = mesher.GenerateMesh(this);
             if (m == null && renderer == null)
                 return true;
             if(m != null && renderer == null)
-                renderer = world.CreateChunkRenderer(this);
+                renderer = world.Renderer.CreateChunkRenderer(this);
             if(m != null)
                 renderer.Update(m);
             renderer?.SetActive(m != null);
@@ -115,7 +115,7 @@ namespace SurviveCore.World {
                 neighbors[i] = BorderChunk.Instance;
             }
             if (renderer != null) {
-                world.DisposeChunkRenderer(renderer);
+                world.Renderer.DisposeChunkRenderer(renderer);
                 renderer = null;
             }
         

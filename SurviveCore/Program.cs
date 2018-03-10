@@ -1,5 +1,9 @@
 ﻿using System;
-using OpenTK;
+using System.Diagnostics;
+using WinApi.Desktop;
+using WinApi.User32;
+using WinApi.Windows.Controls;
+using WinApi.Windows.Helpers;
 
 namespace SurviveCore {
     internal static class Program {
@@ -7,13 +11,39 @@ namespace SurviveCore {
         [STAThread]
         private static void Main(string[] args) {
             Console.WriteLine("Vector hardware acceleration: " + System.Numerics.Vector.IsHardwareAccelerated);
-            using(var game = new SurvivalGame()) {
-                game.Title = "Test Game";
-                game.VSync = VSyncMode.Adaptive;
-                game.X = (DisplayDevice.GetDisplay(DisplayIndex.Default).Width - game.Width) / 2;
-                game.Y = (DisplayDevice.GetDisplay(DisplayIndex.Default).Height - game.Height) / 2;
+            try {
+                ApplicationHelpers.SetupDefaultExceptionHandlers();
             
-                game.Run(120);
+                using (var win = Window.Create<SurvivalGame>(text: "Hello", width: 1280, height: 720)) {
+                    win.CenterToScreen();
+                    win.Show();
+            
+                    void DestroyHandler() => MessageHelpers.PostQuitMessage();
+                    win.Destroyed += DestroyHandler;
+            
+                    long lastupdated = Stopwatch.GetTimestamp();
+                    long updatetick = (long)(1f / 200 * Stopwatch.Frequency);
+                    
+                    Message msg = new Message();
+                    while (msg.Value != (uint)WM.QUIT) {
+                        if (User32Helpers.PeekMessage(out msg, IntPtr.Zero, 0, 0, PeekMessageFlags.PM_REMOVE)) {
+                            User32Methods.TranslateMessage(ref msg);
+                            User32Methods.DispatchMessage(ref msg);
+                        } else {
+                            while (lastupdated + updatetick < Stopwatch.GetTimestamp()) {
+                                win.Update();
+                                lastupdated += updatetick;
+                            }
+                            win.Draw();
+                            win.Validate();
+                        }
+                    }
+            
+                    win.Destroyed -= DestroyHandler;
+                }
+            
+            } catch (Exception ex) {
+                MessageBoxHelpers.ShowError(ex);
             }
         }
 

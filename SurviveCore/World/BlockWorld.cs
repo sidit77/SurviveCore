@@ -6,15 +6,12 @@ using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using Priority_Queue;
-using SurviveCore.OpenGL.Helper;
 using SurviveCore.World.Rendering;
-using SurviveCore.World.Utils;
 
 namespace SurviveCore.World {
 
     public class BlockWorld : IDisposable {
 
-	    public const int RendererPoolSize = 256;
 	    public const int MaxLoadTasks = 30;
 	    public const int MaxUpdateTime = 5;
         public const int Height = 8;
@@ -27,8 +24,8 @@ namespace SurviveCore.World {
 
 	    private readonly IWorldGenerator generator;
 	    private readonly ChunkMesher mesher;
+	    private readonly WorldRenderer renderer;
 
-        private readonly ObjectPool<ChunkRenderer> rendererPool;
         private readonly Queue<ChunkLocation> meshUpdateQueue;
         private readonly Dictionary<ChunkLocation, Chunk> chunkMap;
         private readonly SimplePriorityQueue<ChunkLocation, int> chunkLoadQueue;
@@ -36,15 +33,14 @@ namespace SurviveCore.World {
 	    private readonly HashSet<ChunkLocation> currentlyLoading;
 	    private readonly ConcurrentQueue<WorldChunk> loadedChunks;
         
-        private delegate void OnDraw(Frustum f);
-        private event OnDraw DrawEvent;
+        
 
 	    private readonly Stopwatch updateTimer;
 	    private readonly Stopwatch debugTimer;
 	    private int averageChunkUpdates;
 	    
-        public BlockWorld() {
-            rendererPool = new ObjectPool<ChunkRenderer>(RendererPoolSize, () => new ChunkRenderer());
+        public BlockWorld(WorldRenderer renderer) {
+	        this.renderer = renderer;
             meshUpdateQueue = new Queue<ChunkLocation>();
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
             chunkLoadQueue = new SimplePriorityQueue<ChunkLocation, int>();
@@ -63,10 +59,8 @@ namespace SurviveCore.World {
 	        
         }
 
-        public void Draw(Frustum frustum) {
-            DrawEvent?.Invoke(frustum);
-        }
-
+	    public WorldRenderer Renderer => renderer;
+	    
         public void Update(int cx, int cz) {
             updateTimer.Restart();
             if(centerX != cx || centerZ != cz) {
@@ -87,10 +81,9 @@ namespace SurviveCore.World {
 		        Console.WriteLine("Loading Tasks: {0}", currentlyLoading.Count);
 		        Console.WriteLine("Meshing Queue: {0}", meshUpdateQueue.Count);
 		        Console.WriteLine("Average Meshs: {0}", averageChunkUpdates);
-		        Console.WriteLine("ChunkRenderer: {0}", DrawEvent?.GetInvocationList().Length);
+		        Console.WriteLine("ChunkRenderer: {0}", renderer.NumberOfRenderers);
 		        debugTimer.Restart();
 	        }
-	        
         }
 	    
         public Block GetBlock(int x, int y, int z) {
@@ -120,20 +113,7 @@ namespace SurviveCore.World {
             return SetBlock((int)Math.Round(vec.X), (int)Math.Round(vec.Y), (int)Math.Round(vec.Z), b, m);
         }
 
-        public ChunkRenderer CreateChunkRenderer(Chunk c) {
-            ChunkRenderer r = rendererPool.Get().SetUp(c);
-            DrawEvent += r.Draw;
-            return r;
-        }
         
-        public void DisposeChunkRenderer(ChunkRenderer c) {
-            DrawEvent -= c.Draw;
-            if(rendererPool.Add(c))
-                c.CleanUp();
-            else
-                c.Dispose();
-        }
-
 	    private void UpdateChunkQueues() {
 		    for (int x = -LoadDistance; x <= LoadDistance; x++) {
 			    for (int z = -LoadDistance; z <= LoadDistance; z++) {
@@ -226,8 +206,7 @@ namespace SurviveCore.World {
 	        foreach(Chunk c in chunkMap.Values)
 		        chunkUnloadStack.Push(c);
 	        UnloadChunks();
-            while (rendererPool.Count > 0)
-                rendererPool.Get().Dispose();
+            
         }
 
     }

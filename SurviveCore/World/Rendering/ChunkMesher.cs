@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace SurviveCore.World.Rendering {
     
     public class ChunkMesher {
         
-        private readonly List<float> vertices1;
-        private readonly List<byte> vertices2;
+        private readonly List<Vertex> vertices;
 
         private readonly  BlockFace[] mask;
         private readonly  int[] p = new int[3];
@@ -16,12 +17,11 @@ namespace SurviveCore.World.Rendering {
         private bool done;
         
         public ChunkMesher() {
-            vertices1 = new List<float>();
-            vertices2 = new List<byte>();
+            vertices = new List<Vertex>();
             mask = new BlockFace[Chunk.Size * Chunk.Size];
         }
 
-        public Mesh GenerateMesh(Chunk chunk) {
+        public Vertex[] GenerateMesh(Chunk chunk) {
             if(chunk.isEmpty())
                 return null;
             
@@ -29,8 +29,7 @@ namespace SurviveCore.World.Rendering {
             int y = chunk.Location.WY;
             int z = chunk.Location.WZ;
             
-            vertices1.Clear();
-            vertices2.Clear();
+            vertices.Clear();
 
             for (axis = 0; axis < 6; axis++) {
                 d = axis % 3;
@@ -84,14 +83,16 @@ namespace SurviveCore.World.Rendering {
 
                                 for(l = 0; l < 6; l++) {
                                     k = axis * 30 + l * 5;
-                                    vertices1.Add(x - 0.5f + p[0] + FaceVertices[k + 0] * s[0]);
-                                    vertices1.Add(y - 0.5f + p[1] + FaceVertices[k + 1] * s[1]);
-                                    vertices1.Add(z - 0.5f + p[2] + FaceVertices[k + 2] * s[2]);
-                                    vertices1.Add(FaceVertices[k + 3] * s[d == 2 ? u : v]);
-                                    vertices1.Add(FaceVertices[k + 4] * s[d == 2 ? v : u]);
-                                    vertices2.Add((byte)axis);
-                                    vertices2.Add((byte)mask[n].TextureID);
-                                    vertices2.Add((byte)mask[n].AoID);
+                                    vertices.Add(new Vertex(
+                                        x - 0.5f + p[0] + FaceVertices[k + 0] * s[0],
+                                        y - 0.5f + p[1] + FaceVertices[k + 1] * s[1],
+                                        z - 0.5f + p[2] + FaceVertices[k + 2] * s[2],
+                                        FaceVertices[k + 3] * s[d == 2 ? u : v],
+                                        FaceVertices[k + 4] * s[d == 2 ? v : u],
+                                        (byte)mask[n].AoID));
+                                    //vertices2.Add((byte)axis);
+                                    //vertices2.Add((byte)mask[n].TextureID);
+                                    //vertices2.Add((byte)mask[n].AoID);
                                 }
 
                                 for(l = 0; l < s[v]; ++l) {
@@ -113,11 +114,8 @@ namespace SurviveCore.World.Rendering {
                 }
 
             }
-            return vertices1.Count <= 0 ? null :
-                new Mesh{
-                    vertices1 = vertices1.ToArray(),
-                    vertices2 = vertices2.ToArray()
-                };
+
+            return vertices.Count <= 0 ? null : vertices.ToArray();
         }
 
         private struct BlockFace {
@@ -195,10 +193,25 @@ namespace SurviveCore.World.Rendering {
         };
         
     }
-    
-    public class Mesh {
-        public float[] vertices1;
-        public byte[] vertices2;
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct Vertex {
+        public Vector3 Position;
+        public Vector2 Texcoord;
+        public byte AmbientOcclusion;
+
+        public Vertex(Vector3 position, Vector2 texcoord, byte ao) {
+            Position = position;
+            Texcoord = texcoord;
+            AmbientOcclusion = ao;
+        }
+
+        public Vertex(float x, float y, float z, float s, float t, byte ao) {
+            Position = new Vector3(x,y,z);
+            Texcoord = new Vector2(s, t);
+            AmbientOcclusion = ao;
+        }
+        
     }
     
 }
