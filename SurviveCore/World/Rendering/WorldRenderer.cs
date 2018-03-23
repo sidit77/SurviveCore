@@ -72,7 +72,7 @@ namespace SurviveCore.World.Rendering {
                 MinimumLod = 0
             });
 
-            colortexture = DDSLoader.LoadDDS(device, "./Assets/Textures/Blocks.dds");//LoadTextures(device, Block.Textures);
+            colortexture = DDSLoader.LoadDDS(device, "./Assets/Textures/Blocks.dds");
             Dictionary<string, int> temp = new Dictionary<string, int>();
             foreach (string b in File.ReadAllLines("./Assets/Textures/Blocks.txt")) {
                 temp.Add(b, temp.Count);
