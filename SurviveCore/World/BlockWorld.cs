@@ -82,6 +82,7 @@ namespace SurviveCore.World {
 		        Console.WriteLine("Meshing Queue: {0}", meshUpdateQueue.Count);
 		        Console.WriteLine("Average Meshs: {0}", averageChunkUpdates);
 		        Console.WriteLine("ChunkRenderer: {0}", renderer.NumberOfRenderers);
+		        Console.WriteLine("AvMeshingTime: {0}", mesher.AverageChunkMeshingTime);
 		        debugTimer.Restart();
 	        }
         }

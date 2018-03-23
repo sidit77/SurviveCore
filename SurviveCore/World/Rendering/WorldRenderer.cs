@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
+using System.Net.Http.Headers;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using SharpDX.D3DCompiler;
@@ -8,6 +12,7 @@ using SharpDX.DXGI;
 using SurviveCore.DirectX;
 using SurviveCore.World.Utils;
 using Buffer = SharpDX.Direct3D11.Buffer;
+using Device = SharpDX.Direct3D11.Device;
 
 namespace SurviveCore.World.Rendering {
     
@@ -15,11 +20,8 @@ namespace SurviveCore.World.Rendering {
 
         private const int RendererPoolSize = 256;
         
-        private readonly DirectXContext dx;
         private readonly ObjectPool<ChunkRenderer> rendererPool;
-        
-        private delegate void OnDraw(Frustum f);
-        private event OnDraw DrawEvent;
+        private readonly HashSet<ChunkRenderer> renderer;
 
         private readonly VertexShader worldvs;
         private readonly PixelShader worldps;
@@ -28,10 +30,15 @@ namespace SurviveCore.World.Rendering {
 
         private readonly ShaderResourceView aotexture;
         private readonly SamplerState aosampler;
+
+        private readonly ShaderResourceView colortexture;
+        private readonly SamplerState colorsampler;
+
+        private readonly ImmutableDictionary<string, int> blockmapping;
         
-        public WorldRenderer(DirectXContext dx) {
-            this.dx = dx;
-            rendererPool = new ObjectPool<ChunkRenderer>(RendererPoolSize, ()=>new ChunkRenderer(dx));
+        public WorldRenderer(Device device) {
+            rendererPool = new ObjectPool<ChunkRenderer>(RendererPoolSize, ()=>new ChunkRenderer(device));
+            renderer = new HashSet<ChunkRenderer>();
 
             CompilationResult vscode = ShaderBytecode.CompileFromFile("./Assets/Shader/World.hlsl", "VS", "vs_5_0");
             CompilationResult pscode = ShaderBytecode.CompileFromFile("./Assets/Shader/World.hlsl", "PS", "ps_5_0");
@@ -41,19 +48,20 @@ namespace SurviveCore.World.Rendering {
             if(pscode.HasErrors)
                 Console.WriteLine(pscode.Message);
             
-            worldvs = new VertexShader(dx.Device, vscode);
-            worldps = new PixelShader (dx.Device, pscode);
+            worldvs = new VertexShader(device, vscode);
+            worldps = new PixelShader (device, pscode);
             
-            vsbuffer = new Buffer(dx.Device, new BufferDescription(Marshal.SizeOf<Matrix4x4>(), BindFlags.ConstantBuffer, ResourceUsage.Default));
+            vsbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<Matrix4x4>(), BindFlags.ConstantBuffer, ResourceUsage.Default));
             
-            layout = new InputLayout(dx.Device, vscode, new [] {
+            layout = new InputLayout(device, vscode, new [] {
                 new InputElement("POSITION", 0, Format.R32G32B32_Float,  0, 0, InputClassification.PerVertexData, 0),
                 new InputElement("TEXCOORD", 0, Format.R32G32_Float   , 12, 0, InputClassification.PerVertexData, 0),
-                new InputElement("AOCASE"  , 0, Format.R8_UInt        , 20, 0, InputClassification.PerVertexData, 0)
+                new InputElement("AOCASE"  , 0, Format.R8_UInt        , 20, 0, InputClassification.PerVertexData, 0),
+                new InputElement("TEXID"   , 0, Format.R8_UInt        , 21, 0, InputClassification.PerVertexData, 0)
             });
-
-            aotexture = DDSLoader.LoadDDS(dx.Device, "./Assets/Textures/AmbientOcclusion.dds");
-            aosampler = new SamplerState(dx.Device, new SamplerStateDescription {
+            
+            aotexture = DDSLoader.LoadDDS(device, "./Assets/Textures/AmbientOcclusion.dds");
+            aosampler = new SamplerState(device, new SamplerStateDescription {
                 Filter = Filter.Anisotropic,
                 AddressU = TextureAddressMode.Mirror,
                 AddressV = TextureAddressMode.Mirror,
@@ -63,35 +71,60 @@ namespace SurviveCore.World.Rendering {
                 MaximumLod = 30,
                 MinimumLod = 0
             });
+
+            colortexture = DDSLoader.LoadDDS(device, "./Assets/Textures/Blocks.dds");//LoadTextures(device, Block.Textures);
+            Dictionary<string, int> temp = new Dictionary<string, int>();
+            foreach (string b in File.ReadAllLines("./Assets/Textures/Blocks.txt")) {
+                temp.Add(b, temp.Count);
+            }
+            blockmapping = temp.ToImmutableDictionary();
+
+            colorsampler = new SamplerState(device, new SamplerStateDescription {
+                Filter = Filter.Anisotropic,
+                AddressU = TextureAddressMode.Wrap,
+                AddressV = TextureAddressMode.Wrap,
+                AddressW = TextureAddressMode.Wrap,
+                ComparisonFunction = Comparison.Never,
+                MipLodBias = -0.3f,
+                MaximumLod = 30,
+                MinimumLod = 0
+            });
         }
         
-        public void Draw(Camera camera) {
-            dx.Context.VertexShader.Set(worldvs);
-            dx.Context.PixelShader.Set(worldps);
-            dx.Context.UpdateSubresource(ref camera.CameraMatrix, vsbuffer);
-            dx.Context.VertexShader.SetConstantBuffer(0, vsbuffer);
-            dx.Context.InputAssembler.InputLayout = layout;
-            dx.Context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
-            dx.Context.PixelShader.SetShaderResource(0, aotexture);
-            dx.Context.PixelShader.SetSampler(0, aosampler);
-            DrawEvent?.Invoke(camera.Frustum);
+        public void Draw(DeviceContext context, Camera camera) {
+            context.VertexShader.Set(worldvs);
+            context.PixelShader.Set(worldps);
+            context.UpdateSubresource(ref camera.CameraMatrix, vsbuffer);
+            context.VertexShader.SetConstantBuffer(0, vsbuffer);
+            context.InputAssembler.InputLayout = layout;
+            context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
+            context.PixelShader.SetShaderResource(0, aotexture);
+            context.PixelShader.SetSampler(0, aosampler);
+            context.PixelShader.SetShaderResource(1, colortexture);
+            context.PixelShader.SetSampler(1, colorsampler);
+            foreach (ChunkRenderer cr in renderer)
+                cr.Draw(context, camera.Frustum);
         }
 
         public ChunkRenderer CreateChunkRenderer(Chunk c) {
             ChunkRenderer r = rendererPool.Get().SetUp(c);
-            DrawEvent += r.Draw;
+            renderer.Add(r);
             return r;
         }
         
         public void DisposeChunkRenderer(ChunkRenderer c) {
-            DrawEvent -= c.Draw;
+            renderer.Remove(c);
             if(rendererPool.Add(c))
                 c.CleanUp();
             else
                 c.Dispose();
         }
 
-        public int NumberOfRenderers => DrawEvent?.GetInvocationList().Length ?? 0;
+        public ImmutableDictionary<string, int> GetBlockMapping() {
+            return blockmapping;
+        }
+        
+        public int NumberOfRenderers => renderer.Count;
         
         public void Dispose() {
             worldps.Dispose();
@@ -100,9 +133,12 @@ namespace SurviveCore.World.Rendering {
             layout.Dispose();
             aosampler.Dispose();
             aotexture.Dispose();
+            colorsampler.Dispose();
+            colortexture.Dispose();
             while (rendererPool.Count > 0)
                 rendererPool.Get().Dispose();
         }
+        
     }
     
 }

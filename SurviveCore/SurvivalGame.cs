@@ -33,7 +33,7 @@ namespace SurviveCore {
                 Position = new Vector3(8, 50, 8)
             };
             
-            worldrenderer = new WorldRenderer(dx);
+            worldrenderer = new WorldRenderer(dx.Device);
             world = new BlockWorld(worldrenderer);
 
             GC.Collect();
@@ -158,7 +158,7 @@ namespace SurviveCore {
 
             dx.Clear(Color.DarkSlateGray);
             dx.Context.Rasterizer.State = defaultrenderstate;
-            worldrenderer.Draw(camera);
+            worldrenderer.Draw(dx.Context, camera);
             
             //if(Settings.Instance.Wireframe) {
             //    GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
@@ -182,7 +182,7 @@ namespace SurviveCore {
             //hudprogram.Bind();
             //GL.DrawArrays(PrimitiveType.Points, 0, 1);
 
-            dx.SwapChain.Present(0, 0);
+            dx.SwapChain.Present(1, 0);
         }
 
         protected override void OnKey(ref KeyPacket packet) {

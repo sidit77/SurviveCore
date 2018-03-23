@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
@@ -19,11 +21,20 @@ namespace SurviveCore.World.Rendering {
         public ChunkMesher() {
             vertices = new List<Vertex>();
             mask = new BlockFace[Chunk.Size * Chunk.Size];
+            timer = new Stopwatch();
         }
 
-        public Vertex[] GenerateMesh(Chunk chunk) {
+        private Stopwatch timer;
+        private long nrofch;
+
+        public long AverageChunkMeshingTime => (timer.ElapsedTicks / nrofch);
+        
+        public Vertex[] GenerateMesh(Chunk chunk, ImmutableDictionary<string, int> blockmapping) {
             if(chunk.isEmpty())
                 return null;
+            
+            timer.Start();
+            nrofch++;
             
             int x = chunk.Location.WX;
             int y = chunk.Location.WY;
@@ -48,9 +59,9 @@ namespace SurviveCore.World.Rendering {
                     
                     for(p[v] = 0; p[v] < Chunk.Size; ++p[v]) {
                         for(p[u] = 0; p[u] < Chunk.Size; ++p[u]) {
-                            mask[n++].Visible = !chunk.GetBlockDirect(p[0], p[1], p[2]).IsUnrendered && !(chunk.GetBlock(p[0] + q[0], p[1] + q[1], p[2] + q[2]).IsSolid());
+                            mask[n++].Visible = !chunk.GetBlockDirect(p[0], p[1], p[2]).IsUnrendered() && !(chunk.GetBlock(p[0] + q[0], p[1] + q[1], p[2] + q[2]).IsSolid());
                             if(mask[n - 1].Visible) {
-                                mask[n - 1].TextureID = chunk.GetBlockDirect(p[0], p[1], p[2]).GetTextureID(axis);
+                                mask[n - 1].TextureID = blockmapping[chunk.GetBlockDirect(p[0], p[1], p[2]).GetTexture(axis)];
                                 mask[n - 1].AoID = 0;
                                 for(l = 0; l < 8; l++) {
                                     s[d] = 0;
@@ -89,7 +100,8 @@ namespace SurviveCore.World.Rendering {
                                         z - 0.5f + p[2] + FaceVertices[k + 2] * s[2],
                                         FaceVertices[k + 3] * s[d == 2 ? u : v],
                                         FaceVertices[k + 4] * s[d == 2 ? v : u],
-                                        (byte)mask[n].AoID));
+                                        (byte)mask[n].AoID,
+                                        (byte)mask[n].TextureID));
                                     //vertices2.Add((byte)axis);
                                     //vertices2.Add((byte)mask[n].TextureID);
                                     //vertices2.Add((byte)mask[n].AoID);
@@ -114,7 +126,7 @@ namespace SurviveCore.World.Rendering {
                 }
 
             }
-
+            timer.Stop();
             return vertices.Count <= 0 ? null : vertices.ToArray();
         }
 
@@ -199,17 +211,20 @@ namespace SurviveCore.World.Rendering {
         public Vector3 Position;
         public Vector2 Texcoord;
         public byte AmbientOcclusion;
+        public byte Texture;
 
-        public Vertex(Vector3 position, Vector2 texcoord, byte ao) {
+        public Vertex(Vector3 position, Vector2 texcoord, byte ao, byte tex) {
             Position = position;
             Texcoord = texcoord;
             AmbientOcclusion = ao;
+            Texture = tex;
         }
 
-        public Vertex(float x, float y, float z, float s, float t, byte ao) {
+        public Vertex(float x, float y, float z, float s, float t, byte ao, byte te) {
             Position = new Vector3(x,y,z);
             Texcoord = new Vector2(s, t);
             AmbientOcclusion = ao;
+            Texture = te;
         }
         
     }

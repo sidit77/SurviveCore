@@ -13,7 +13,7 @@ namespace SurviveCore {
             Console.WriteLine("Vector hardware acceleration: " + System.Numerics.Vector.IsHardwareAccelerated);
             try {
                 ApplicationHelpers.SetupDefaultExceptionHandlers();
-            
+
                 using (var win = Window.Create<SurvivalGame>(text: "Hello", width: 1280, height: 720)) {
                     win.CenterToScreen();
                     win.Show();
@@ -43,8 +43,11 @@ namespace SurviveCore {
                 }
             
             } catch (Exception ex) {
-                MessageBoxHelpers.ShowError(ex);
+                MessageBoxHelpers.Show(ex.Message);
+                Console.WriteLine(ex);
+                Console.ReadKey();
             }
+            
         }
 
     }

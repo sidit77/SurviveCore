@@ -3,6 +3,7 @@ using System.IO;
 
 namespace AOTextureGenerator {
     static class Program {
+        
         static void Main(string[] args) {
 
             //Array.ForEach(Reduce(new byte[] {
@@ -11,13 +12,13 @@ namespace AOTextureGenerator {
             //    3,3,4,4,
             //    3,3,4,4
             //}), x => Console.WriteLine(x));
-            
-            
+
             Console.WriteLine("Starting to generate file");
 
             const int resolution = 32;
             const int mipmap = 6;
-            
+
+            Directory.CreateDirectory("./Assets/Textures");
             using (FileStream fs = File.Create("./Assets/Textures/AmbientOcclusion.dds")) {
                 using (BinaryWriter bw = new BinaryWriter(fs)) {
                     foreach(int i in new[]{
@@ -84,36 +85,68 @@ namespace AOTextureGenerator {
 
             byte[] data = new byte[32 * 32];
             for(int j = 0; j < f.GetLength(0); j++) {
-                int c1 = 180 + 25 * GetAOValue(f[j, 7], f[j, 0], f[j, 1], level);
-                int c2 = 180 + 25 * GetAOValue(f[j, 1], f[j, 2], f[j, 3], level);
-                int c3 = 180 + 25 * GetAOValue(f[j, 3], f[j, 4], f[j, 5], level);
-                int c4 = 180 + 25 * GetAOValue(f[j, 5], f[j, 6], f[j, 7], level);
+                float c1 = GetAOValue(f[j, 7], f[j, 0], f[j, 1], level);
+                float c2 = GetAOValue(f[j, 1], f[j, 2], f[j, 3], level);
+                float c3 = GetAOValue(f[j, 3], f[j, 4], f[j, 5], level);
+                float c4 = GetAOValue(f[j, 5], f[j, 6], f[j, 7], level);
 
                 for (int x = 0; x < f[j, 10]; x++) {
                     for (int y = 0; y < f[j, 11]; y++) {
                         float dx = (float)x / f[j, 10];
                         float dy = (float)y / f[j, 11];
-                        data[(y + f[j, 9]) * 32 + x + f[j, 8]] = (byte)(Mix(c1, c2, c3, c4, dx, dy));
+                        data[(y + f[j, 9]) * 32 + x + f[j, 8]] = (byte)(Math.Round(255 * SmoothMix(c1, c2, c3, c4, dx, dy)));
                     }
                 }
             }
             return data;
         }
         
-        private static int GetAOValue(int side1, int corner, int side2, int config) {
+        private static float GetAOValue(int side1, int corner, int side2, int config) {
             bool s1 = (config & side1) != 0;
             bool c = (config & corner) != 0;
             bool s2 = (config & side2) != 0;
             if(s1 && s2) {
                 return 0;
             }
-            return 3 - (s1 ? 1 : 0) - (c ? 1 : 0) - (s2 ? 1 : 0);
+            return (3.0f - (s1 ? 1 : 0) - (c ? 1 : 0) - (s2 ? 1 : 0))/3;
         }
-        
-        private static int Mix(int c1, int c2, int c3, int c4, float dx, float dy) {
-            float c12 = dx * c2 + (1 - dx) * c1;
-            float c34 = dx * c3 + (1 - dx) * c4;
-            return (int)Math.Round(dy * c34 + (1 - dy) * c12);
+
+        private static float NoMix(float c1, float c2, float c3, float c4, float dx, float dy) {
+            float c12 = dx < 0.5f ? c1 : c2;
+            float c34 = dx < 0.5f ? c4 : c3;
+            return dy < 0.5 ? c12 : c34;
+        }
+
+
+        private static float Mix(float c1, float c2, float c3, float c4, float dx, float dy) {
+            float c12 = Mix(c1, c2, dx);
+            float c34 = Mix(c4, c3, dx);
+            return Mix(c12, c34, dy);
+        }
+
+        private static float Mix(float c1, float c2, float x) {
+            return c1 * (1-x) + c2 * x;
+        }
+
+        private static float SmoothMix(float c1, float c2, float c3, float c4, float dx, float dy) {
+            const float min = 0.1f;
+            const float max = 0.9f;
+            float c12 = SmoothStep(min, max, Mix(c1, c2, dx));
+            float c34 = SmoothStep(min, max, Mix(c4, c3, dx));
+            return SmoothStep(min, max, Mix(c12, c34, dy));
+        }
+
+        private static float SmoothStep(float edge0, float edge1, float dx) {
+            float x = Clamp((dx - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+            return x * x * (3 - 2 * x);
+        }
+
+        private static float Clamp(float x, float lowerlimit, float upperlimit){
+            if (x < lowerlimit)
+                x = lowerlimit;
+            if (x > upperlimit)
+                x = upperlimit;
+            return x;
         }
 
         private static byte[] Reduce(byte[] input) {

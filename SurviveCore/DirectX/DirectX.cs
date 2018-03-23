@@ -52,7 +52,7 @@ namespace SurviveCore.DirectX {
                 Usage = Usage.RenderTargetOutput
             };
 
-            Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.Debug, swapChainDescription, out device, out swapChain);
+            Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, swapChainDescription, out device, out swapChain);
             context = device.ImmediateContext;
 
             var factory = swapChain.GetParent<Factory>();
