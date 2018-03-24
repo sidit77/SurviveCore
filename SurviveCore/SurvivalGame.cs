@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Numerics;
 using SharpDX.Direct3D11;
 using SurviveCore.DirectX;
+using SurviveCore.Gui.Text;
 using SurviveCore.World;
 using SurviveCore.World.Rendering;
 using WinApi.User32;
@@ -19,7 +20,9 @@ namespace SurviveCore {
         private Camera camera;
         private WorldRenderer worldrenderer;
         private BlockWorld world;
-
+        private Font font;
+        private TextRenderer textrenderer;
+        
         protected override void OnCreate(ref CreateWindowPacket packet) {
             base.OnCreate(ref packet);
             dx = new DirectXContext(Handle, GetClientSize());
@@ -36,6 +39,10 @@ namespace SurviveCore {
             worldrenderer = new WorldRenderer(dx.Device);
             world = new BlockWorld(worldrenderer);
 
+            font = new Font(dx.Device, "./Assets/Fonts/Abel.fnt");
+            textrenderer = new TextRenderer(dx.Device);
+            textrenderer.Screen = Matrix4x4.CreateOrthographicOffCenter(0,GetClientSize().Width, GetClientSize().Height, 0, -1, 1);//Matrix4x4.CreateOrthographic(10,10,-1,1);//
+            
             GC.Collect();
         }
         
@@ -160,6 +167,7 @@ namespace SurviveCore {
             dx.Context.Rasterizer.State = defaultrenderstate;
             worldrenderer.Draw(dx.Context, camera);
             
+            textrenderer.DrawText(dx.Context, font, "The quick brown fox jumps over the lazy dog. 123456789", 0.25f);
             //if(Settings.Instance.Wireframe) {
             //    GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
             //    GL.Disable(EnableCap.CullFace);
@@ -251,6 +259,8 @@ namespace SurviveCore {
             defaultrenderstate.Dispose();
             world.Dispose();
             worldrenderer.Dispose();
+            font.Dispose();
+            textrenderer.Dispose();
             //aoTexture.Dispose();
             //texture.Dispose();
         }

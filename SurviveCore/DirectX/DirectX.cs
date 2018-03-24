@@ -51,7 +51,6 @@ namespace SurviveCore.DirectX {
                 SwapEffect = SwapEffect.Discard,
                 Usage = Usage.RenderTargetOutput
             };
-
             Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, swapChainDescription, out device, out swapChain);
             context = device.ImmediateContext;
 
