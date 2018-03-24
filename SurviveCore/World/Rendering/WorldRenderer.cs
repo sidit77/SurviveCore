@@ -102,6 +102,7 @@ namespace SurviveCore.World.Rendering {
             context.PixelShader.SetSampler(0, aosampler);
             context.PixelShader.SetShaderResource(1, colortexture);
             context.PixelShader.SetSampler(1, colorsampler);
+            //TODO Enable/Disable Ao & Fog
             foreach (ChunkRenderer cr in renderer)
                 cr.Draw(context, camera.Frustum);
         }

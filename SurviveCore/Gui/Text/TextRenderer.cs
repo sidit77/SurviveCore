@@ -54,8 +54,8 @@ namespace SurviveCore.Gui.Text {
                 AddressV = TextureAddressMode.Clamp,
                 AddressW = TextureAddressMode.Clamp,
                 ComparisonFunction = Comparison.Never,
-                MipLodBias = -0.3f,
-                MaximumLod = 30,
+                MipLodBias = 0,
+                MaximumLod = 0,
                 MinimumLod = 0
             });
 

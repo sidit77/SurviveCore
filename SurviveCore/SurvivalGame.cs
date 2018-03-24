@@ -16,6 +16,7 @@ namespace SurviveCore {
 
         private DirectXContext dx;
         private RasterizerState defaultrenderstate;
+        private RasterizerState wireframerenderstate;
         
         private Camera camera;
         private WorldRenderer worldrenderer;
@@ -31,7 +32,12 @@ namespace SurviveCore {
                 CullMode = CullMode.Front,
                 FillMode = FillMode.Solid
             });
-
+            wireframerenderstate = new RasterizerState(dx.Device, new RasterizerStateDescription {
+                CullMode = CullMode.None,
+                FillMode = FillMode.Wireframe
+            });
+            
+            
             camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.1f, 300.0f) {
                 Position = new Vector3(8, 50, 8)
             };
@@ -41,12 +47,12 @@ namespace SurviveCore {
 
             font = new Font(dx.Device, "./Assets/Fonts/Abel.fnt");
             textrenderer = new TextRenderer(dx.Device);
-            textrenderer.Screen = Matrix4x4.CreateOrthographicOffCenter(0,GetClientSize().Width, GetClientSize().Height, 0, -1, 1);//Matrix4x4.CreateOrthographic(10,10,-1,1);//
+            textrenderer.Screen = Matrix4x4.CreateOrthographicOffCenter(0,GetClientSize().Width, GetClientSize().Height, 0, -1, 1);
             
             GC.Collect();
         }
         
-        private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass };
+        private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt };
         private int slot;
         private bool captured = false;
 
@@ -71,10 +77,6 @@ namespace SurviveCore {
                     camera.Position += movement;
                 }
 
-                if (User32Methods.GetKeyState(VirtualKey.LBUTTON).IsPressed && !captured)
-                    User32Methods.ShowCursor(!(captured = true));
-                if (User32Methods.GetKeyState(VirtualKey.ESCAPE).IsPressed && captured)
-                    User32Methods.ShowCursor(!(captured = false));
                 if (captured) {
                     NetCoreEx.Geometry.Rectangle r = GetWindowRect();
                     User32Methods.GetCursorPos(out var p1);
@@ -85,6 +87,7 @@ namespace SurviveCore {
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right , (float)(p1.Y - p2.Y) / 600);
                 }
             }
+            
 //
             //if(Keyboard[Key.Left])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, -0.1f);
             //if(Keyboard[Key.Right]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, 0.1f);
@@ -164,31 +167,11 @@ namespace SurviveCore {
                 world.Update((int)Math.Floor(camera.Position.X) >> Chunk.BPC, (int)Math.Floor(camera.Position.Z) >> Chunk.BPC);
 
             dx.Clear(Color.DarkSlateGray);
-            dx.Context.Rasterizer.State = defaultrenderstate;
+            dx.Context.Rasterizer.State = Settings.Instance.Wireframe ? wireframerenderstate : defaultrenderstate;
             worldrenderer.Draw(dx.Context, camera);
+            dx.Context.Rasterizer.State = defaultrenderstate;
             
-            textrenderer.DrawText(dx.Context, font, "The quick brown fox jumps over the lazy dog. 123456789", 0.25f);
-            //if(Settings.Instance.Wireframe) {
-            //    GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-            //    GL.Disable(EnableCap.CullFace);
-            //}else{
-            //    GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-            //    GL.Enable(EnableCap.CullFace);
-            //}
-
-
-            //texture.Bind(TextureUnit.Texture0);
-            //aoTexture.Bind(TextureUnit.Texture1);
-            //program.Bind();
-            //program.SetUniform("mvp", false, ref camera.CameraMatrix);
-            //program.SetUniform("fog_color", Color4.DarkSlateGray);
-            //program.SetUniform("enable_fog", Settings.Instance.Fog ? 1 : 0);
-            //program.SetUniform("pos", camera.Position);
-            //program.SetUniform("ao", Settings.Instance.AmbientOcclusion ? 1 : 0);
-            //world.Draw(frustum);
-//
-            //hudprogram.Bind();
-            //GL.DrawArrays(PrimitiveType.Points, 0, 1);
+            textrenderer.DrawText(dx.Context, font, "Block: " + inventory[slot].Name, 0.25f);//"The quick brown fox jumps over the lazy dog. 123456789"
 
             dx.SwapChain.Present(1, 0);
         }
@@ -198,6 +181,10 @@ namespace SurviveCore {
             if(!packet.IsKeyDown || packet.InputState.IsPreviousKeyStatePressed)
                 return;
             switch (packet.Key) {
+                case VirtualKey.ESCAPE:
+                    if(captured)
+                        User32Methods.ShowCursor(!(captured = false));
+                    break;
                 case VirtualKey.F1:
                     Settings.Instance.ToggleUpdateCamera();
                     break;
@@ -234,6 +221,8 @@ namespace SurviveCore {
             base.OnMouseButton(ref packet);
             if(!packet.IsButtonDown)
                 return;
+            if (packet.Button == MouseButton.Left && !captured)
+                User32Methods.ShowCursor(!(captured = true));
             if (packet.Button == MouseButton.Left && captured) {
                 Vector3? intersection = FindIntersection(false);
                 if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
@@ -247,10 +236,16 @@ namespace SurviveCore {
             }
         }
 
+        protected override void OnMouseWheel(ref MouseWheelPacket packet) {
+            base.OnMouseWheel(ref packet);
+            slot = (slot + (packet.WheelDelta / 120) + inventory.Length) % inventory.Length;
+        }
+
         protected override void OnSize(ref SizePacket packet) {
             base.OnSize(ref packet);
             dx.Resize(packet.Size);
             camera.Aspect = (float) packet.Size.Width / packet.Size.Height;
+            textrenderer.Screen = Matrix4x4.CreateOrthographicOffCenter(0,GetClientSize().Width, GetClientSize().Height, 0, -1, 1);
         }
         
         protected override void Dispose(bool d) {
@@ -261,8 +256,6 @@ namespace SurviveCore {
             worldrenderer.Dispose();
             font.Dispose();
             textrenderer.Dispose();
-            //aoTexture.Dispose();
-            //texture.Dispose();
         }
 
     }

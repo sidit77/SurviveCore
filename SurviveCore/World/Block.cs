@@ -8,6 +8,7 @@ namespace SurviveCore.World {
         public static readonly Block Stone = new Block("Stone", "Stone.png");
         public static readonly Block Grass = new Block("Grass", "Grass_Side.png").SetTexture(1, "Grass_Top.png").SetTexture(4, "Dirt.png");
         public static readonly Block Bricks = new Block("Bricks", "Bricks.png");
+        public static readonly Block Dirt = new Block("Dirt", "Dirt.png");
     }
 
     public class Block {
