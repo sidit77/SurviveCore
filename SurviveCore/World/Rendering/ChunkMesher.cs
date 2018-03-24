@@ -102,9 +102,6 @@ namespace SurviveCore.World.Rendering {
                                         FaceVertices[k + 4] * s[d == 2 ? v : u],
                                         (byte)mask[n].AoID,
                                         (byte)mask[n].TextureID));
-                                    //vertices2.Add((byte)axis);
-                                    //vertices2.Add((byte)mask[n].TextureID);
-                                    //vertices2.Add((byte)mask[n].AoID);
                                 }
 
                                 for(l = 0; l < s[v]; ++l) {

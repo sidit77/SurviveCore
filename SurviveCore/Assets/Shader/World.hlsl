@@ -25,7 +25,8 @@ Texture2DArray aotexture : register(t0);
 SamplerState aosampler : register(s0);
 
 Texture2DArray colortexture : register(t1);
-SamplerState colorsampler : register(s1);
+SamplerState colorsampler1 : register(s1);
+SamplerState colorsampler2 : register(s2);
 
 cbuffer cbPerFrame{
     float4 fogcolor;
@@ -34,7 +35,15 @@ cbuffer cbPerFrame{
 }
 
 float4 PS(VS_OUTPUT input) : SV_TARGET {
-    float4 color = colortexture.Sample(colorsampler, float3(input.Texcoord, input.TexID)).rgba;
+    float4 color = float4(1,1,1,1);
+    
+    //Super ugly band-aid-fix
+    if(input.TexID == 1){
+        color = colortexture.Sample(colorsampler2, float3(input.Texcoord, input.TexID)).rgba;
+    }else{
+        color = colortexture.Sample(colorsampler1, float3(input.Texcoord, input.TexID)).rgba;
+    }
+     
     float ao = aotexture.Sample(aosampler, float3(input.Texcoord, input.AOCase)).a * 0.2 + 0.8;
    
     [flatten] if((enabled & 1) != 0){
