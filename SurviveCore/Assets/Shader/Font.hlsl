@@ -3,15 +3,26 @@ struct VS_OUTPUT {
 	float2 Texcoord : TEXCOORD;
 };
 
+struct CharRenderData {
+    float2 TexMin;
+    float2 TexSize;
+    float2 Size;
+    float2 Unused;
+};
+
 cbuffer vscb {
     float4x4 MVP;
 };
 
-VS_OUTPUT VS(float4 inPos : POSITION, float2 inTex : TEXCOORD) {
+StructuredBuffer<CharRenderData> charrenderdata;
+
+VS_OUTPUT VS(float4 inPos : POSITION, float2 inTex : TEXCOORD, float2 inOff : OFFSET, float scale : SCALE, float4 inColor : COLOR, int inId : CHARID) {
 	VS_OUTPUT output;
 
-	output.Position =  mul(MVP,inPos);
-	output.Texcoord = inTex;
+    CharRenderData crd = charrenderdata[inId];
+
+	output.Position = mul(MVP,float4(inOff + inPos * crd.Size * scale,1,1));
+	output.Texcoord = crd.TexMin + inTex * crd.TexSize;
 	return output;
 }
 

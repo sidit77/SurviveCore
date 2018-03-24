@@ -51,7 +51,8 @@ namespace SurviveCore.DirectX {
                 SwapEffect = SwapEffect.Discard,
                 Usage = Usage.RenderTargetOutput
             };
-            Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, swapChainDescription, out device, out swapChain);
+            Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, new[]{FeatureLevel.Level_11_1},swapChainDescription, out device, out swapChain);
+            Console.WriteLine(Device.FeatureLevel);
             context = device.ImmediateContext;
 
             var factory = swapChain.GetParent<Factory>();

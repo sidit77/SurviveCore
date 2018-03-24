@@ -2,22 +2,28 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using SharpDX.Direct3D11;
 using SurviveCore.DirectX;
+using Buffer = SharpDX.Direct3D11.Buffer;
 using Device = SharpDX.Direct3D11.Device;
 
 namespace SurviveCore.Gui.Text{
     public class Font : IDisposable{
    
         private readonly ShaderResourceView texture;
+        private readonly ShaderResourceView chardata;
         private readonly Dictionary<char, CharInfo> charinfo;
         private readonly Dictionary<(char,char), int> kerning;
         private float lineheight;
         private readonly Vector2 pagesize;
 
         public Vector2 Size => pagesize;
+        public ShaderResourceView Texture => texture;
+        public ShaderResourceView CharData => chardata;
         
         public Font(Device device, string path) {
+            List<CharRenderData> charbufferdata = new List<CharRenderData>();
             charinfo = new Dictionary<char, CharInfo>();
             kerning = new Dictionary<(char, char), int>();
             string pagefile = "";
@@ -105,14 +111,8 @@ namespace SurviveCore.Gui.Text{
                                 break;
                         }
                     }
-                    charinfo.Add(c, new CharInfo(
-                        x, 
-                        y,
-                        w,
-                        h, 
-                        xo, 
-                        yo, 
-                        xa));
+                    charinfo.Add(c, new CharInfo(charbufferdata.Count, xo, yo, xa));
+                    charbufferdata.Add(new CharRenderData(x,y,w,h,pagesize));
                 }
                 if (tokens[0].Equals("kerning")) {
                     char c1 = ' ', c2 = ' ';
@@ -137,9 +137,14 @@ namespace SurviveCore.Gui.Text{
                 }
             }
             texture = DDSLoader.LoadDDS(device, pagefile);
+            Buffer b = Buffer.Create(device, charbufferdata.ToArray(), new BufferDescription(
+                charbufferdata.Count * Marshal.SizeOf<CharRenderData>(), 
+                ResourceUsage.Immutable, BindFlags.ShaderResource, 
+                CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, 
+                Marshal.SizeOf<CharRenderData>()));
+            chardata = new ShaderResourceView(device, b);
+            b.Dispose();
         }
-
-        public ShaderResourceView Texture => texture;
 
         public CharInfo GetCharInfo(char c) {
             return charinfo[c];
@@ -151,16 +156,32 @@ namespace SurviveCore.Gui.Text{
         
         public void Dispose() {
             texture.Dispose();
+            chardata.Dispose();
         }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        private struct CharRenderData {
+            private Vector2 TexMin;
+            private Vector2 TexSize;
+            private Vector2 Size;
+            private readonly Vector2 Unused;
+            
+            public CharRenderData(float x, float y, float w, float h, Vector2 pagesize) : this() {
+                TexMin = new Vector2(x, y) / pagesize;
+                TexSize = new Vector2(w, h) / pagesize;
+                Size = new Vector2(w, h);
+            }
+        }
+        
    }
 
     public struct CharInfo {
-        public readonly Vector2 Min, Size, Pos;
+        public readonly int RenderId;
+        public readonly Vector2 Pos;
         public readonly int Advance;
-        public Vector2 Max => Min + Size;
-        public CharInfo(float x, float y, float width, float height, float xOffset, float yOffset, int advance) {
-            Min = new Vector2(x,y);
-            Size = new Vector2(width, height);
+        
+        public CharInfo(int id, float xOffset, float yOffset, int advance) {
+            RenderId = id;
             Pos = new Vector2(xOffset, yOffset);
             Advance = advance;
         }

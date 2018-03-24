@@ -45,7 +45,6 @@ namespace SurviveCore {
             } catch (Exception ex) {
                 MessageBoxHelpers.Show(ex.Message);
                 Console.WriteLine(ex);
-                Console.ReadKey();
             }
             
         }

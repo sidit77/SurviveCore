@@ -18,6 +18,10 @@ namespace SurviveCore.DirectX {
             return new RawColor4((float)c.R / 255, (float)c.G / 255, (float)c.B / 255, (float)c.A / 255);
         }
 
+        public static int ToRgba(this Color c) {
+            return c.R << 24 | c.G << 16 | c.B << 8 | c.A;
+        }
+
         public static RawVector2 Raw(this Vector2 v) {
             return new RawVector2(v.X, v.Y);
         }

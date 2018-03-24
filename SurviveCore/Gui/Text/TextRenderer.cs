@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using SharpDX.D3DCompiler;
@@ -7,6 +8,7 @@ using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using SharpDX.Mathematics.Interop;
+using SurviveCore.DirectX;
 using Buffer = SharpDX.Direct3D11.Buffer;
 using Device = SharpDX.Direct3D11.Device;
 
@@ -17,6 +19,7 @@ namespace SurviveCore.Gui.Text {
         private readonly PixelShader ps;
 
         private readonly Buffer vertexbuffer;
+        private readonly Buffer instancebuffer;
         private readonly Buffer constantbuffer;
         private readonly InputLayout layout;
         private readonly SamplerState sampler;
@@ -41,11 +44,17 @@ namespace SurviveCore.Gui.Text {
             vs = new VertexShader(device, vscode);
             ps = new PixelShader (device, pscode);
             
-            vertexbuffer = new Buffer(device, new BufferDescription(6 * 4 * 4 * 100, BindFlags.VertexBuffer, ResourceUsage.Default));
+            instancebuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<CharInstance>() * 100, BindFlags.VertexBuffer, ResourceUsage.Default));
+            vertexbuffer = Buffer.Create(device, BindFlags.VertexBuffer, new float[] {0, 0, 0, 0,0, 1, 0, 1, 1, 0, 1, 0,0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0});
+            
             
             layout = new InputLayout(device, vscode, new [] {
-                new InputElement("POSITION", 0, Format.R32G32_Float, 0, 0, InputClassification.PerVertexData, 0),
-                new InputElement("TEXCOORD", 0, Format.R32G32_Float, 8, 0, InputClassification.PerVertexData, 0)
+                new InputElement("POSITION", 0, Format.R32G32_Float,    0, 0, InputClassification.PerVertexData, 0),
+                new InputElement("TEXCOORD", 0, Format.R32G32_Float,    8, 0, InputClassification.PerVertexData, 0),
+                new InputElement("OFFSET"  , 0, Format.R32G32_Float,    0, 1, InputClassification.PerInstanceData, 1),
+                new InputElement("SCALE"   , 0, Format.R32_Float,       8, 1, InputClassification.PerInstanceData, 1),
+                new InputElement("COLOR"   , 0, Format.R8G8B8A8_UNorm, 12, 1, InputClassification.PerInstanceData, 1),
+                new InputElement("CHARID"  , 0, Format.R32_UInt,       16, 1, InputClassification.PerInstanceData, 1),
             });
 
             sampler = new SamplerState(device, new SamplerStateDescription {
@@ -81,8 +90,10 @@ namespace SurviveCore.Gui.Text {
         public void DrawText(DeviceContext context, Font f, string s, float scale) {
             context.InputAssembler.InputLayout = layout;
             context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
-            context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vertexbuffer, 4 * 4, 0));
+            context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vertexbuffer, 2 * 2 * sizeof(float), 0));
+            context.InputAssembler.SetVertexBuffers(1, new VertexBufferBinding(instancebuffer, Marshal.SizeOf<CharInstance>(), 0));
             context.VertexShader.Set(vs);
+            context.VertexShader.SetShaderResource(0, f.CharData);
             context.UpdateSubresource(ref screenmatrix, constantbuffer);
             context.VertexShader.SetConstantBuffer(0, constantbuffer);
             context.PixelShader.Set(ps);
@@ -90,48 +101,22 @@ namespace SurviveCore.Gui.Text {
             context.PixelShader.SetSampler(0, sampler);
             context.OutputMerger.BlendState = blendstate;
             
-            float[] stdt = new float[6 * 4 * 100];
+            CharInstance[] stdt = new CharInstance[100];
             for (int i = 0, x = 0; i < s.Length; i++) {
                 CharInfo ci = f.GetCharInfo(s[i]);
                 int kerning = 0;
                 if (i > 0)
                     kerning = f.GetKerning((s[i - 1], s[i]));
 
-                stdt[24 * i +  0] = (ci.Pos.X + x + kerning) * scale;
-                stdt[24 * i +  1] = (ci.Pos.Y + 0) * scale;
-                stdt[24 * i +  2] =  ci.Min.X / f.Size.X;
-                stdt[24 * i +  3] =  ci.Min.Y / f.Size.Y;
-                
-                stdt[24 * i +  4] = (ci.Pos.X + x + kerning) * scale;
-                stdt[24 * i +  5] = (ci.Pos.Y + ci.Size.Y) * scale;
-                stdt[24 * i +  6] =  ci.Min.X / f.Size.X;
-                stdt[24 * i +  7] =  ci.Max.Y / f.Size.Y;
-                
-                stdt[24 * i +  8] = (ci.Pos.X + x + ci.Size.X + kerning) * scale;
-                stdt[24 * i +  9] = (ci.Pos.Y + 0) * scale;
-                stdt[24 * i + 10] =  ci.Max.X / f.Size.X;
-                stdt[24 * i + 11] =  ci.Min.Y / f.Size.Y;
-                
-                stdt[24 * i + 12] = (ci.Pos.X + x + kerning) * scale;
-                stdt[24 * i + 13] = (ci.Pos.Y + ci.Size.Y) * scale;
-                stdt[24 * i + 14] =  ci.Min.X / f.Size.X;
-                stdt[24 * i + 15] =  ci.Max.Y / f.Size.Y;
-                
-                stdt[24 * i + 16] = (ci.Pos.X + x + ci.Size.X + kerning) * scale;
-                stdt[24 * i + 17] = (ci.Pos.Y + ci.Size.Y) * scale;
-                stdt[24 * i + 18] =  ci.Max.X / f.Size.X;
-                stdt[24 * i + 19] =  ci.Max.Y / f.Size.Y;
-                
-                stdt[24 * i + 20] = (ci.Pos.X + x + ci.Size.X + kerning) * scale;
-                stdt[24 * i + 21] = (ci.Pos.Y + 0) * scale;
-                stdt[24 * i + 22] =  ci.Max.X / f.Size.X;
-                stdt[24 * i + 23] =  ci.Min.Y / f.Size.Y;
+                stdt[i].Color = Color.White.ToRgba();
+                stdt[i].Scale = scale;
+                stdt[i].Id = ci.RenderId;
+                stdt[i].Pos = new Vector2(ci.Pos.X + x + kerning, ci.Pos.Y) * scale;
 
                 x += ci.Advance + kerning - 6;
             }
-            context.UpdateSubresource(stdt, vertexbuffer);
-            
-            context.Draw(s.Length * 6,0);
+            context.UpdateSubresource(stdt, instancebuffer);
+            context.DrawInstanced(6,s.Length * 6,0,0);
             context.OutputMerger.BlendState = null;
         }
         
@@ -143,7 +128,17 @@ namespace SurviveCore.Gui.Text {
             sampler.Dispose();
             blendstate.Dispose();
             constantbuffer.Dispose();
+            instancebuffer.Dispose();
         }
+        
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        private struct CharInstance {
+            public Vector2 Pos;
+            public float Scale;
+            public int Color;
+            public int Id;
+        }
+        
     }
 
     //public struct Text {
