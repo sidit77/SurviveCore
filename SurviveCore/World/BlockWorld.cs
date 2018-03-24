@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using System.Threading.Tasks;
 using Priority_Queue;
 using SurviveCore.World.Rendering;
@@ -36,7 +37,6 @@ namespace SurviveCore.World {
         
 
 	    private readonly Stopwatch updateTimer;
-	    private readonly Stopwatch debugTimer;
 	    private int averageChunkUpdates;
 	    
         public BlockWorld(WorldRenderer renderer) {
@@ -52,14 +52,26 @@ namespace SurviveCore.World {
             generator = new DefaultWorldGenerator((int)Stopwatch.GetTimestamp());
 	        
 	        updateTimer = new Stopwatch();
-	        debugTimer = new Stopwatch();
-	        debugTimer.Start();
 	        
 	        UpdateChunkQueues();
 	        
         }
 
 	    public WorldRenderer Renderer => renderer;
+
+	    public string DebugText {
+		    get {
+			    StringBuilder sb = new StringBuilder();
+			    sb.AppendFormat("Loaded Chunks: {0}", chunkMap.Count)            .Append("\n");
+			    sb.AppendFormat("Loading Queue: {0}", chunkLoadQueue.Count)      .Append("\n");
+			    sb.AppendFormat("Loading Tasks: {0}", currentlyLoading.Count)    .Append("\n");
+			    sb.AppendFormat("Meshing Queue: {0}", meshUpdateQueue.Count)     .Append("\n");
+			    sb.AppendFormat("Average Meshs: {0}", averageChunkUpdates)       .Append("\n");
+			    sb.AppendFormat("ChunkRenderer: {0}", renderer.NumberOfRenderers).Append("\n");
+			    sb.AppendFormat("AvMeshingTime: {0}", mesher.AverageChunkMeshingTime);
+			    return sb.ToString();
+		    }
+	    }
 	    
         public void Update(int cx, int cz) {
             updateTimer.Restart();
@@ -73,18 +85,6 @@ namespace SurviveCore.World {
 		    UnloadChunks();
 		    LoadChunks();
 		    MeshChunks();
-
-	        if (Settings.Instance.DebugInfo && debugTimer.ElapsedMilliseconds >= 250) {
-		        Console.WriteLine("");
-		        Console.WriteLine("Loaded Chunks: {0}", chunkMap.Count);
-		        Console.WriteLine("Loading Queue: {0}", chunkLoadQueue.Count);
-		        Console.WriteLine("Loading Tasks: {0}", currentlyLoading.Count);
-		        Console.WriteLine("Meshing Queue: {0}", meshUpdateQueue.Count);
-		        Console.WriteLine("Average Meshs: {0}", averageChunkUpdates);
-		        Console.WriteLine("ChunkRenderer: {0}", renderer.NumberOfRenderers);
-		        Console.WriteLine("AvMeshingTime: {0}", mesher.AverageChunkMeshingTime);
-		        debugTimer.Restart();
-	        }
         }
 	    
         public Block GetBlock(int x, int y, int z) {

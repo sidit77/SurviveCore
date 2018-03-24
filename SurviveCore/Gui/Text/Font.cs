@@ -15,10 +15,11 @@ namespace SurviveCore.Gui.Text{
         private readonly ShaderResourceView chardata;
         private readonly Dictionary<char, CharInfo> charinfo;
         private readonly Dictionary<(char,char), int> kerning;
-        private float lineheight;
-        private readonly Vector2 pagesize;
+        private readonly int lineheight;
+        private readonly int size;
 
-        public Vector2 Size => pagesize;
+        public int Size => size;
+        public int LineHeight => lineheight;
         public ShaderResourceView Texture => texture;
         public ShaderResourceView CharData => chardata;
         
@@ -27,6 +28,7 @@ namespace SurviveCore.Gui.Text{
             charinfo = new Dictionary<char, CharInfo>();
             kerning = new Dictionary<(char, char), int>();
             string pagefile = "";
+            Vector2 pagesize = new Vector2();
             foreach (string line in File.ReadAllLines(path)) {
                 string[] tokens = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (tokens.Length <= 0)
@@ -41,6 +43,7 @@ namespace SurviveCore.Gui.Text{
                                 lineheight = int.Parse(keyvalue[1]);
                                 break;
                             case "base":
+                                size = int.Parse(keyvalue[1]);
                                 break;
                             case "scaleW":
                                 pagesize.X = int.Parse(keyvalue[1]);
@@ -147,7 +150,10 @@ namespace SurviveCore.Gui.Text{
         }
 
         public CharInfo GetCharInfo(char c) {
-            return charinfo[c];
+            if (charinfo.TryGetValue(c, out CharInfo ci))
+                return ci;
+            Console.WriteLine("The font doesnt contains to character: " + c + " (" + (int)c + ")");
+            return charinfo['?'];
         }
         
         public int GetKerning((char,char) c) {
@@ -164,7 +170,6 @@ namespace SurviveCore.Gui.Text{
             private Vector2 TexMin;
             private Vector2 TexSize;
             private Vector2 Size;
-            private readonly Vector2 Unused;
             
             public CharRenderData(float x, float y, float w, float h, Vector2 pagesize) : this() {
                 TexMin = new Vector2(x, y) / pagesize;
@@ -173,18 +178,20 @@ namespace SurviveCore.Gui.Text{
             }
         }
         
+        public struct CharInfo {
+            public readonly int RenderId;
+            public readonly Vector2 Pos;
+            public readonly int Advance;
+            
+            public CharInfo(int id, float xOffset, float yOffset, int advance) {
+                RenderId = id;
+                Pos = new Vector2(xOffset, yOffset);
+                Advance = advance;
+            }
+        }
+        
    }
 
-    public struct CharInfo {
-        public readonly int RenderId;
-        public readonly Vector2 Pos;
-        public readonly int Advance;
-        
-        public CharInfo(int id, float xOffset, float yOffset, int advance) {
-            RenderId = id;
-            Pos = new Vector2(xOffset, yOffset);
-            Advance = advance;
-        }
-    }
+    
     
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using SharpDX.D3DCompiler;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
@@ -25,11 +26,11 @@ namespace SurviveCore.Gui.Text {
         private readonly SamplerState sampler;
         private readonly BlendState blendstate;
 
-        private Matrix4x4 screenmatrix;
+        private ConstantBufferData constdata;
 
         public Matrix4x4 Screen {
-            get => screenmatrix;
-            set => screenmatrix = value;
+            get => constdata.ScreenMatrix;
+            set => constdata.ScreenMatrix = value;
         }
         
         public TextRenderer(Device device) {
@@ -44,17 +45,15 @@ namespace SurviveCore.Gui.Text {
             vs = new VertexShader(device, vscode);
             ps = new PixelShader (device, pscode);
             
-            instancebuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<CharInstance>() * 100, BindFlags.VertexBuffer, ResourceUsage.Default));
-            vertexbuffer = Buffer.Create(device, BindFlags.VertexBuffer, new float[] {0, 0, 0, 0,0, 1, 0, 1, 1, 0, 1, 0,0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0});
-            
+            instancebuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<CharInstance>() * 500, BindFlags.VertexBuffer, ResourceUsage.Default));
+            vertexbuffer = Buffer.Create(device, BindFlags.VertexBuffer, new float[] {0,0,0,1,1,0,0,1,1,1,1,0});
+            constantbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<ConstantBufferData>(), BindFlags.ConstantBuffer, ResourceUsage.Default));
             
             layout = new InputLayout(device, vscode, new [] {
                 new InputElement("POSITION", 0, Format.R32G32_Float,    0, 0, InputClassification.PerVertexData, 0),
-                new InputElement("TEXCOORD", 0, Format.R32G32_Float,    8, 0, InputClassification.PerVertexData, 0),
                 new InputElement("OFFSET"  , 0, Format.R32G32_Float,    0, 1, InputClassification.PerInstanceData, 1),
                 new InputElement("SCALE"   , 0, Format.R32_Float,       8, 1, InputClassification.PerInstanceData, 1),
-                new InputElement("COLOR"   , 0, Format.R8G8B8A8_UNorm, 12, 1, InputClassification.PerInstanceData, 1),
-                new InputElement("CHARID"  , 0, Format.R32_UInt,       16, 1, InputClassification.PerInstanceData, 1),
+                new InputElement("CHARID"  , 0, Format.R32_UInt,       12, 1, InputClassification.PerInstanceData, 1),
             });
 
             sampler = new SamplerState(device, new SamplerStateDescription {
@@ -84,39 +83,42 @@ namespace SurviveCore.Gui.Text {
             };
             blendstate = new BlendState(device, blenddesc);
 
-            constantbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<Matrix4x4>(), BindFlags.ConstantBuffer, ResourceUsage.Default));
         }
 
-        public void DrawText(DeviceContext context, Font f, string s, float scale) {
+        public void DrawText(DeviceContext context, Vector2 position, Font font, string s, int size = 20) {
+            DrawText(context, position, new Text(font, s, size));
+        }
+        
+        public void DrawText(DeviceContext context, Vector2 position, Font font, string s, Color c, int size = 20) {
+            DrawText(context, position, new Text(font, s, size), c);
+        }
+        
+        public void DrawText(DeviceContext context, Vector2 position, Text t) {
+            DrawText(context, position, t, Color.White);
+        }
+        
+        public void DrawTextCentered(DeviceContext context, Vector2 position, Font font, string text, Color color, int size = 20) {
+            Text t = new Text(font, text, size);
+            DrawText(context, position - new Vector2(t.Size.Width / 2, t.Size.Height / 2), t, color);
+        }
+
+        public void DrawText(DeviceContext context, Vector2 position, Text t, Color color) {
             context.InputAssembler.InputLayout = layout;
             context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
-            context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vertexbuffer, 2 * 2 * sizeof(float), 0));
+            context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vertexbuffer, 2 * sizeof(float), 0));
             context.InputAssembler.SetVertexBuffers(1, new VertexBufferBinding(instancebuffer, Marshal.SizeOf<CharInstance>(), 0));
             context.VertexShader.Set(vs);
-            context.VertexShader.SetShaderResource(0, f.CharData);
-            context.UpdateSubresource(ref screenmatrix, constantbuffer);
+            context.VertexShader.SetShaderResource(0, t.Font.CharData);
             context.VertexShader.SetConstantBuffer(0, constantbuffer);
             context.PixelShader.Set(ps);
-            context.PixelShader.SetShaderResource(0, f.Texture);
+            context.PixelShader.SetShaderResource(0, t.Font.Texture);
             context.PixelShader.SetSampler(0, sampler);
             context.OutputMerger.BlendState = blendstate;
-            
-            CharInstance[] stdt = new CharInstance[100];
-            for (int i = 0, x = 0; i < s.Length; i++) {
-                CharInfo ci = f.GetCharInfo(s[i]);
-                int kerning = 0;
-                if (i > 0)
-                    kerning = f.GetKerning((s[i - 1], s[i]));
-
-                stdt[i].Color = Color.White.ToRgba();
-                stdt[i].Scale = scale;
-                stdt[i].Id = ci.RenderId;
-                stdt[i].Pos = new Vector2(ci.Pos.X + x + kerning, ci.Pos.Y) * scale;
-
-                x += ci.Advance + kerning - 6;
-            }
-            context.UpdateSubresource(stdt, instancebuffer);
-            context.DrawInstanced(6,s.Length * 6,0,0);
+            constdata.Color = color.Raw();
+            constdata.Position = position;
+            context.UpdateBuffer(instancebuffer, t.Data);
+            context.UpdateSubresource(ref constdata, constantbuffer);
+            context.DrawInstanced(6,t.Data.Length,0,0);
             context.OutputMerger.BlendState = null;
         }
         
@@ -132,40 +134,60 @@ namespace SurviveCore.Gui.Text {
         }
         
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        private struct CharInstance {
+        public struct CharInstance {
             public Vector2 Pos;
             public float Scale;
-            public int Color;
             public int Id;
+        }
+        
+        [StructLayout(LayoutKind.Sequential, Pack = 1, Size = 96)]
+        private struct ConstantBufferData {
+            public Matrix4x4 ScreenMatrix;
+            public RawColor4 Color;
+            public Vector2 Position;
         }
         
     }
 
-    //public struct Text {
-    //    
-    //    private static List<Vertex> builder = new List<Vertex>();
-    //    
-    //    public Font Font;
-    //    public string message;
-    //    public Vertex[] Data;
+    public struct Text {
+        
+        private const int DeltaWidth = -6;
+        private const int DeltaHeight = -17;
+        
+        public readonly Font Font;
+        public readonly string message;
+        public readonly TextRenderer.CharInstance[] Data;
+        public readonly Size Size;
+        
+        public Text(Font font, string text, int size = 20) {
+            Font = font;
+            message = text;
+            Data = new TextRenderer.CharInstance[text.Length];
+            float scale = (float) size / font.Size;
+            int x = 0, y = 0, mx = 0;
+            for (int i = 0; i < text.Length; i++) {
+                if (text[i] == '\n') {
+                    y += font.LineHeight + DeltaHeight;
+                    mx = Math.Max(mx, x);
+                    x = 0;
+                    continue;
+                }
+                Font.CharInfo ci = font.GetCharInfo(text[i]);
+                int kerning = 0;
+                if (i > 0)
+                    kerning = font.GetKerning((text[i - 1], text[i]));
 
-    //    public Text(Font f, string t, int size = 20) {
-    //        Font = f;
-    //        message = t;
-    //        builder.Clear();
-    //        foreach(char c in message) {
-    //            
-    //        }
+                Data[i].Scale = scale;
+                Data[i].Id = ci.RenderId;
+                Data[i].Pos = new Vector2(ci.Pos.X + x + kerning, ci.Pos.Y + y + DeltaHeight) * scale;
 
-    //        Data = builder.ToArray();
-    //    }
+                x += ci.Advance + kerning + DeltaWidth;
+            }
+            Size = new Size((int)MathF.Round(mx * scale), (int)MathF.Round((y + font.LineHeight + DeltaHeight) * scale));
+        }
 
-    //    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    //    public struct Vertex {
-    //        private Vector2 pos;
-    //        private Vector2 tex;
-    //    }
-    //    
-    //}
+        
+        
+    }
     
 }

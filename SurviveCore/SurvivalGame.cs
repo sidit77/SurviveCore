@@ -55,6 +55,7 @@ namespace SurviveCore {
         private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt };
         private int slot;
         private bool captured = false;
+        private bool vsync = true;
 
         //private float velocity;
 
@@ -171,9 +172,16 @@ namespace SurviveCore {
             worldrenderer.Draw(dx.Context, camera);
             dx.Context.Rasterizer.State = defaultrenderstate;
             
-            textrenderer.DrawText(dx.Context, font, "Block: " + inventory[slot].Name, 0.25f);//"The quick brown fox jumps over the lazy dog. 123456789"
-
-            dx.SwapChain.Present(1, 0);
+            textrenderer.DrawText(dx.Context, new Vector2(5,5), font, "Block: " + inventory[slot].Name, Color.White, 25);//"The quick brown fox jumps over the lazy dog. 123456789"
+            textrenderer.DrawTextCentered(dx.Context, new Vector2(GetClientSize().Width/2, GetClientSize().Height/2), font, "+", Color.White, 25);
+            
+            if (Settings.Instance.DebugInfo) {
+                Text text = new Text(font, world.DebugText);
+                textrenderer.DrawText(dx.Context, new Vector2(GetClientSize().Width-Math.Max(text.Size.Width - 6, 200), 5), text);
+            }
+                
+            
+            dx.SwapChain.Present(vsync ? 1 : 0, 0);
         }
 
         protected override void OnKey(ref KeyPacket packet) {
@@ -208,8 +216,8 @@ namespace SurviveCore {
                     //Console.WriteLine(WindowState);
                     break;
                 case VirtualKey.F12:
-                    //VSync = VSync == VSyncMode.Adaptive ? VSyncMode.Off : VSyncMode.Adaptive;
-                    //Console.WriteLine(VSync);
+                    vsync = !vsync;
+                    Console.WriteLine("VSync: " + vsync);
                     break;
                 case VirtualKey.SPACE:
                     Console.WriteLine(ChunkLocation.FromPos(camera.Position));
