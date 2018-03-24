@@ -72,7 +72,7 @@ namespace SurviveCore {
                 if (User32Methods.GetKeyState(VirtualKey.D).IsPressed)
                     movement += camera.Right;
                 movement = movement.LengthSquared() > 0 ? Vector3.Normalize(movement) : Vector3.Zero;
-                movement *= User32Methods.GetKeyState(VirtualKey.SHIFT).IsPressed ? 0.5f : 0.06f;
+                movement *= User32Methods.GetKeyState(VirtualKey.SHIFT).IsPressed ? 0.3f : 0.06f;
                 if(Settings.Instance.Physics) {
                     camera.Position = ClampToWorld(camera.Position, movement);
                 }else {

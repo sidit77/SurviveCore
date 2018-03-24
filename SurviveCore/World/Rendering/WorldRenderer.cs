@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Drawing;
 using System.IO;
 using System.Net.Http.Headers;
 using System.Numerics;
@@ -9,6 +10,7 @@ using SharpDX.D3DCompiler;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
+using SharpDX.Mathematics.Interop;
 using SurviveCore.DirectX;
 using SurviveCore.World.Utils;
 using Buffer = SharpDX.Direct3D11.Buffer;
@@ -27,6 +29,7 @@ namespace SurviveCore.World.Rendering {
         private readonly PixelShader worldps;
         private readonly InputLayout layout;
         private readonly Buffer vsbuffer;
+        private readonly Buffer psbuffer;
 
         private readonly ShaderResourceView aotexture;
         private readonly SamplerState aosampler;
@@ -57,6 +60,7 @@ namespace SurviveCore.World.Rendering {
             worldps = new PixelShader (device, pscode);
             
             vsbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<Matrix4x4>(), BindFlags.ConstantBuffer, ResourceUsage.Default));
+            psbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<ConstantPixelData>(), BindFlags.ConstantBuffer, ResourceUsage.Default));
             
             layout = new InputLayout(device, vscode, new [] {
                 new InputElement("POSITION", 0, Format.R32G32B32_Float,  0, 0, InputClassification.PerVertexData, 0),
@@ -99,15 +103,21 @@ namespace SurviveCore.World.Rendering {
         public void Draw(DeviceContext context, Camera camera) {
             context.VertexShader.Set(worldvs);
             context.PixelShader.Set(worldps);
+            ConstantPixelData cpd = new ConstantPixelData {
+                FogColor = Color.DarkSlateGray.Raw(),
+                Pos = camera.Position,
+                flags  = (Settings.Instance.AmbientOcclusion ? 1 : 0) | (Settings.Instance.Fog ? 2 : 0),
+            };
             context.UpdateSubresource(ref camera.CameraMatrix, vsbuffer);
+            context.UpdateSubresource(ref cpd, psbuffer);
             context.VertexShader.SetConstantBuffer(0, vsbuffer);
             context.InputAssembler.InputLayout = layout;
             context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
+            context.PixelShader.SetConstantBuffer(0, psbuffer);
             context.PixelShader.SetShaderResource(0, aotexture);
             context.PixelShader.SetSampler(0, aosampler);
             context.PixelShader.SetShaderResource(1, colortexture);
             context.PixelShader.SetSampler(1, colorsampler);
-            //TODO Enable/Disable Ao & Fog
             CurrentlyRenderedChunks = 0;
             foreach(ChunkRenderer cr in renderer)
                 if(cr.Draw(context, camera.Frustum))
@@ -138,6 +148,7 @@ namespace SurviveCore.World.Rendering {
             worldps.Dispose();
             worldvs.Dispose();
             vsbuffer.Dispose();
+            psbuffer.Dispose();
             layout.Dispose();
             aosampler.Dispose();
             aotexture.Dispose();
@@ -145,6 +156,13 @@ namespace SurviveCore.World.Rendering {
             colortexture.Dispose();
             while (rendererPool.Count > 0)
                 rendererPool.Get().Dispose();
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        private struct ConstantPixelData {
+            public RawColor4 FogColor;
+            public Vector3 Pos;
+            public int flags;
         }
         
     }
