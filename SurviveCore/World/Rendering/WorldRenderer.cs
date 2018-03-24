@@ -35,7 +35,6 @@ namespace SurviveCore.World.Rendering {
 
         private readonly ShaderResourceView colortexture;
         private readonly SamplerState colorsampler;
-        private readonly SamplerState colorsampler2;
 
         private readonly ImmutableDictionary<string, int> blockmapping;
         
@@ -98,18 +97,6 @@ namespace SurviveCore.World.Rendering {
                 MaximumLod = 30,
                 MinimumLod = 0
             });
-            
-            colorsampler2 = new SamplerState(device, new SamplerStateDescription {
-                Filter = Filter.Anisotropic,
-                AddressU = TextureAddressMode.Mirror,
-                AddressV = TextureAddressMode.Mirror,
-                AddressW = TextureAddressMode.Mirror,
-                ComparisonFunction = Comparison.Never,
-                MipLodBias = -0.3f,
-                MaximumLod = 30,
-                MinimumLod = 0
-            });
-            
         }
         
         public void Draw(DeviceContext context, Camera camera) {
@@ -130,7 +117,6 @@ namespace SurviveCore.World.Rendering {
             context.PixelShader.SetSampler(0, aosampler);
             context.PixelShader.SetShaderResource(1, colortexture);
             context.PixelShader.SetSampler(1, colorsampler);
-            context.PixelShader.SetSampler(2, colorsampler2);
             CurrentlyRenderedChunks = 0;
             foreach(ChunkRenderer cr in renderer)
                 if(cr.Draw(context, camera.Frustum))
@@ -166,7 +152,6 @@ namespace SurviveCore.World.Rendering {
             aosampler.Dispose();
             aotexture.Dispose();
             colorsampler.Dispose();
-            colorsampler2.Dispose();
             colortexture.Dispose();
             while (rendererPool.Count > 0)
                 rendererPool.Get().Dispose();
