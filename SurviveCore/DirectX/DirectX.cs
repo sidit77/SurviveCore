@@ -36,7 +36,7 @@ namespace SurviveCore.DirectX {
             var modeDescription = new ModeDescription {
                 Width = size.Width,
                 Height = size.Height,
-                RefreshRate = new Rational(60, 1),
+                RefreshRate = new Rational(300, 1),
                 Format = Format.R8G8B8A8_UNorm,
                 ScanlineOrdering = DisplayModeScanlineOrder.Unspecified,
                 Scaling = DisplayModeScaling.Unspecified
@@ -54,10 +54,10 @@ namespace SurviveCore.DirectX {
             Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, new[]{FeatureLevel.Level_11_1},swapChainDescription, out device, out swapChain);
             Console.WriteLine(Device.FeatureLevel);
             context = device.ImmediateContext;
-
+            
             var factory = swapChain.GetParent<Factory>();
             factory.MakeWindowAssociation(handle, WindowAssociationFlags.IgnoreAll);
-
+            
             Resize(size);
         }
 

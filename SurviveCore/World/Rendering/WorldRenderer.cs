@@ -36,6 +36,11 @@ namespace SurviveCore.World.Rendering {
 
         private readonly ImmutableDictionary<string, int> blockmapping;
         
+        public int CurrentlyRenderedChunks {
+            get;
+            private set;
+        }
+        
         public WorldRenderer(Device device) {
             rendererPool = new ObjectPool<ChunkRenderer>(RendererPoolSize, ()=>new ChunkRenderer(device));
             renderer = new HashSet<ChunkRenderer>();
@@ -103,8 +108,10 @@ namespace SurviveCore.World.Rendering {
             context.PixelShader.SetShaderResource(1, colortexture);
             context.PixelShader.SetSampler(1, colorsampler);
             //TODO Enable/Disable Ao & Fog
-            foreach (ChunkRenderer cr in renderer)
-                cr.Draw(context, camera.Frustum);
+            CurrentlyRenderedChunks = 0;
+            foreach(ChunkRenderer cr in renderer)
+                if(cr.Draw(context, camera.Frustum))
+                    CurrentlyRenderedChunks++;
         }
 
         public ChunkRenderer CreateChunkRenderer(Chunk c) {

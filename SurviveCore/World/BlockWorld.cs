@@ -62,13 +62,14 @@ namespace SurviveCore.World {
 	    public string DebugText {
 		    get {
 			    StringBuilder sb = new StringBuilder();
-			    sb.AppendFormat("Loaded Chunks: {0}", chunkMap.Count)            .Append("\n");
-			    sb.AppendFormat("Loading Queue: {0}", chunkLoadQueue.Count)      .Append("\n");
-			    sb.AppendFormat("Loading Tasks: {0}", currentlyLoading.Count)    .Append("\n");
-			    sb.AppendFormat("Meshing Queue: {0}", meshUpdateQueue.Count)     .Append("\n");
-			    sb.AppendFormat("Average Meshs: {0}", averageChunkUpdates)       .Append("\n");
-			    sb.AppendFormat("ChunkRenderer: {0}", renderer.NumberOfRenderers).Append("\n");
-			    sb.AppendFormat("AvMeshingTime: {0}", mesher.AverageChunkMeshingTime);
+			    sb.AppendFormat("Loaded Chunks: {0}", chunkMap.Count)                  .Append("\n");
+			    sb.AppendFormat("Loading Queue: {0}", chunkLoadQueue.Count)            .Append("\n");
+			    sb.AppendFormat("Loading Tasks: {0}", currentlyLoading.Count)          .Append("\n");
+			    sb.AppendFormat("Meshing Queue: {0}", meshUpdateQueue.Count)           .Append("\n");
+			    sb.AppendFormat("Average Meshs: {0}", averageChunkUpdates)             .Append("\n");
+			    sb.AppendFormat("ChunkRenderer: {0}", renderer.NumberOfRenderers)      .Append("\n");
+			    sb.AppendFormat("Rendered Chunks: {0}", renderer.CurrentlyRenderedChunks).Append("\n");
+			    sb.AppendFormat("AverMeshingTime: {0}", mesher.AverageChunkMeshingTime);
 			    return sb.ToString();
 		    }
 	    }

@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
 using SharpDX.D3DCompiler;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
@@ -44,7 +42,7 @@ namespace SurviveCore.Gui.Text {
             
             vs = new VertexShader(device, vscode);
             ps = new PixelShader (device, pscode);
-            
+            //TODO ResourceUsage.Dynamic? + more than 500 characters
             instancebuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<CharInstance>() * 500, BindFlags.VertexBuffer, ResourceUsage.Default));
             vertexbuffer = Buffer.Create(device, BindFlags.VertexBuffer, new float[] {0,0,0,1,1,0,0,1,1,1,1,0});
             constantbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<ConstantBufferData>(), BindFlags.ConstantBuffer, ResourceUsage.Default));

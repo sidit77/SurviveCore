@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
 using SharpDX.Direct3D11;
@@ -162,7 +163,18 @@ namespace SurviveCore {
             return null;
         }
 
+
+        private Stopwatch fpstimer = Stopwatch.StartNew();
+        private long fps;
+        private int cfps = 1;
         public void Draw() {
+            if (fpstimer.ElapsedMilliseconds >= 130) {
+                fps = (Stopwatch.Frequency / (fpstimer.ElapsedTicks / cfps));
+                cfps = 0;
+                fpstimer.Restart();
+            }
+            cfps++;
+            
             camera.Update(Settings.Instance.UpdateCamera);
             if(Settings.Instance.UpdateCamera)
                 world.Update((int)Math.Floor(camera.Position.X) >> Chunk.BPC, (int)Math.Floor(camera.Position.Z) >> Chunk.BPC);
@@ -176,10 +188,9 @@ namespace SurviveCore {
             textrenderer.DrawTextCentered(dx.Context, new Vector2(GetClientSize().Width/2, GetClientSize().Height/2), font, "+", Color.White, 25);
             
             if (Settings.Instance.DebugInfo) {
-                Text text = new Text(font, world.DebugText);
+                Text text = new Text(font, "FPS: " + fps + "\n" + world.DebugText);
                 textrenderer.DrawText(dx.Context, new Vector2(GetClientSize().Width-Math.Max(text.Size.Width - 6, 200), 5), text);
             }
-                
             
             dx.SwapChain.Present(vsync ? 1 : 0, 0);
         }
@@ -212,12 +223,10 @@ namespace SurviveCore {
                     Settings.Instance.ToggleDebugInfo();
                     break;
                 case VirtualKey.F11:
-                    //WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
-                    //Console.WriteLine(WindowState);
+                    dx.SwapChain.IsFullScreen = !dx.SwapChain.IsFullScreen;
                     break;
                 case VirtualKey.F12:
                     vsync = !vsync;
-                    Console.WriteLine("VSync: " + vsync);
                     break;
                 case VirtualKey.SPACE:
                     Console.WriteLine(ChunkLocation.FromPos(camera.Position));

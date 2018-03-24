@@ -37,11 +37,13 @@ namespace SurviveCore.World.Rendering {
             this.active = active;
         }
         
-        public void Draw(DeviceContext context, Frustum frustum) {
+        public bool Draw(DeviceContext context, Frustum frustum) {
             if(active && size > 0 && frustum.Intersection(chunk.Location.Min, chunk.Location.Max)) {
                 context.InputAssembler.SetVertexBuffers(0, binding);
                 context.Draw(size, 0);
+                return true;
             }
+            return false;
         }
 
         public void Update(Vertex[] mesh) {
