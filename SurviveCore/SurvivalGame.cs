@@ -2,8 +2,12 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
+using System.Xml;
 using SharpDX.Direct3D11;
 using SurviveCore.DirectX;
+using SurviveCore.Gui;
 using SurviveCore.Gui.Text;
 using SurviveCore.World;
 using SurviveCore.World.Rendering;
@@ -15,6 +19,7 @@ namespace SurviveCore {
 
     public class SurvivalGame : Window {
 
+        private InputManager input;
         private DirectXContext dx;
         private RasterizerState defaultrenderstate;
         private RasterizerState wireframerenderstate;
@@ -24,9 +29,11 @@ namespace SurviveCore {
         private BlockWorld world;
         private Font font;
         private TextRenderer textrenderer;
+        private GuiRenderer gui;
         
         protected override void OnCreate(ref CreateWindowPacket packet) {
             base.OnCreate(ref packet);
+            input = new InputManager(this);
             dx = new DirectXContext(Handle, GetClientSize());
             
             defaultrenderstate = new RasterizerState(dx.Device, new RasterizerStateDescription {
@@ -49,48 +56,44 @@ namespace SurviveCore {
             font = new Font(dx.Device, "./Assets/Fonts/Abel.fnt");
             textrenderer = new TextRenderer(dx.Device);
             textrenderer.Screen = Matrix4x4.CreateOrthographicOffCenter(0,GetClientSize().Width, GetClientSize().Height, 0, -1, 1);
+            gui = new GuiRenderer(dx.Device, input);
             
             GC.Collect();
         }
         
         private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt };
         private int slot;
-        private bool captured = false;
         private bool vsync = true;
 
         //private float velocity;
 
         public void Update() {
-            if (User32Methods.GetForegroundWindow() == Handle) {
+            if (input.Default.IsForeground) {
                 Vector3 movement = Vector3.Zero;
-                if (User32Methods.GetKeyState(VirtualKey.W).IsPressed)
+                if (input.Default.IsKey(VirtualKey.W))
                     movement += camera.Forward;
-                if (User32Methods.GetKeyState(VirtualKey.S).IsPressed)
+                if (input.Default.IsKey(VirtualKey.S))
                     movement += camera.Back;
-                if (User32Methods.GetKeyState(VirtualKey.A).IsPressed)
+                if (input.Default.IsKey(VirtualKey.A))
                     movement += camera.Left;
-                if (User32Methods.GetKeyState(VirtualKey.D).IsPressed)
+                if (input.Default.IsKey(VirtualKey.D))
                     movement += camera.Right;
                 movement = movement.LengthSquared() > 0 ? Vector3.Normalize(movement) : Vector3.Zero;
-                movement *= User32Methods.GetKeyState(VirtualKey.SHIFT).IsPressed ? 0.3f : 0.06f;
+                movement *= input.Default.IsKey(VirtualKey.SHIFT) ? 0.3f : 0.06f;
                 if(Settings.Instance.Physics) {
                     camera.Position = ClampToWorld(camera.Position, movement);
                 }else {
                     camera.Position += movement;
                 }
-
-                if (captured) {
-                    NetCoreEx.Geometry.Rectangle r = GetWindowRect();
-                    User32Methods.GetCursorPos(out var p1);
-                    User32Methods.SetCursorPos((r.Left + r.Right) / 2, (r.Top + r.Bottom) / 2);
-                    User32Methods.GetCursorPos(out var p2);
-
-                    camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)(p1.X - p2.X) / 600);
-                    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right , (float)(p1.Y - p2.Y) / 600);
+                if (input.Default.MouseCaptured) {
+                    var mpos = input.Default.DeltaMousePosition;
+                    camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)(mpos.X) / 600);
+                    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right , (float)(mpos.Y) / 600);
                 }
             }
+               
+            slot = Math.Abs(input.Default.MouseWheel / 120) % inventory.Length;
             
-//
             //if(Keyboard[Key.Left])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, -0.1f);
             //if(Keyboard[Key.Right]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, 0.1f);
             //if(Keyboard[Key.Up])    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, 0.1f);
@@ -101,8 +104,8 @@ namespace SurviveCore {
             //slot = Math.Abs(Mouse.Wheel / 2 % inventory.Length);
 //
             //Title = "Block: " + inventory[slot].Name;
-            
-            
+
+            input.Update();
         }
 
         private bool IsAir(Vector3 pos) {
@@ -164,7 +167,7 @@ namespace SurviveCore {
         }
 
 
-        private Stopwatch fpstimer = Stopwatch.StartNew();
+        private readonly Stopwatch fpstimer = Stopwatch.StartNew();
         private long fps;
         private int cfps = 1;
         public void Draw() {
@@ -186,12 +189,16 @@ namespace SurviveCore {
             
             textrenderer.DrawText(dx.Context, new Vector2(5,5), font, "Block: " + inventory[slot].Name, Color.White, 25);//"The quick brown fox jumps over the lazy dog. 123456789"
             textrenderer.DrawTextCentered(dx.Context, new Vector2(GetClientSize().Width/2, GetClientSize().Height/2), font, "+", Color.White, 25);
+
+            if(gui.Button(new Rectangle(50, 50, 400, 400), "Hallo")) {
+                Console.WriteLine("Hallo");
+            }
             
             if (Settings.Instance.DebugInfo) {
                 Text text = new Text(font, "FPS: " + fps + "\n" + world.DebugText);
                 textrenderer.DrawText(dx.Context, new Vector2(GetClientSize().Width-Math.Max(text.Size.Width - 6, 200), 5), text);
             }
-            
+            gui.Render(dx.Context);
             dx.SwapChain.Present(vsync ? 1 : 0, 0);
         }
 
@@ -201,8 +208,8 @@ namespace SurviveCore {
                 return;
             switch (packet.Key) {
                 case VirtualKey.ESCAPE:
-                    if(captured)
-                        User32Methods.ShowCursor(!(captured = false));
+                    //if(input.Default.MouseCaptured)
+                        input.Default.MouseCaptured = !input.Default.MouseCaptured;
                     break;
                 case VirtualKey.F1:
                     Settings.Instance.ToggleUpdateCamera();
@@ -238,14 +245,14 @@ namespace SurviveCore {
             base.OnMouseButton(ref packet);
             if(!packet.IsButtonDown)
                 return;
-            if (packet.Button == MouseButton.Left && !captured)
-                User32Methods.ShowCursor(!(captured = true));
-            if (packet.Button == MouseButton.Left && captured) {
+            //if(packet.Button == MouseButton.Left && !input.Default.MouseCaptured)
+            //    input.Default.MouseCaptured = true;
+            if (packet.Button == MouseButton.Left && input.Default.MouseCaptured) {
                 Vector3? intersection = FindIntersection(false);
                 if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
                 }
             }
-            if (packet.Button == MouseButton.Right && captured) {
+            if (packet.Button == MouseButton.Right && input.Default.MouseCaptured) {
                 Vector3? intersection = FindIntersection(true);
                 if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
                     world.SetBlock(intersection.Value, Blocks.Air);
@@ -255,7 +262,7 @@ namespace SurviveCore {
 
         protected override void OnMouseWheel(ref MouseWheelPacket packet) {
             base.OnMouseWheel(ref packet);
-            slot = (slot + (packet.WheelDelta / 120) + inventory.Length) % inventory.Length;
+            input.MouseWheelEvent = packet.WheelDelta;
         }
 
         protected override void OnSize(ref SizePacket packet) {

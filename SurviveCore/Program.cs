@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using NetCoreEx.Geometry;
 using WinApi.Desktop;
 using WinApi.User32;
 using WinApi.Windows.Controls;
