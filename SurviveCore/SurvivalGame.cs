@@ -19,7 +19,6 @@ namespace SurviveCore {
 
     public class SurvivalGame : Window {
 
-        private InputManager input;
         private DirectXContext dx;
         private RasterizerState defaultrenderstate;
         private RasterizerState wireframerenderstate;
@@ -31,7 +30,6 @@ namespace SurviveCore {
         
         protected override void OnCreate(ref CreateWindowPacket packet) {
             base.OnCreate(ref packet);
-            input = new InputManager(this);
             dx = new DirectXContext(Handle, GetClientSize());
             
             defaultrenderstate = new RasterizerState(dx.Device, new RasterizerStateDescription {
@@ -51,49 +49,46 @@ namespace SurviveCore {
             worldrenderer = new WorldRenderer(dx.Device);
             world = new BlockWorld(worldrenderer);
 
-            gui = new GuiRenderer(dx.Device, input);
-
-            input.Default.MouseCaptured = true;
+            gui = new GuiRenderer(dx.Device);
             
             GC.Collect();
         }
         
         private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt };
         private int slot;
-        private bool vsync = true;
 
         //private float velocity;
 
-        public void Update() {
-            if (input.Default.IsForeground) {
-                if(input.Default.IsKeyDown(VirtualKey.ESCAPE))
-                    input.Default.MouseCaptured = !input.Default.MouseCaptured;
+        public void Update(InputManager.InputState input) {
+            if (input.IsForeground) {
+                if(input.IsKeyDown(VirtualKey.ESCAPE))
+                    input.MouseCaptured = !input.MouseCaptured;
                 Vector3 movement = Vector3.Zero;
-                if (input.Default.IsKey(VirtualKey.W))
+                if (input.IsKey(VirtualKey.W))
                     movement += camera.Forward;
-                if (input.Default.IsKey(VirtualKey.S))
+                if (input.IsKey(VirtualKey.S))
                     movement += camera.Back;
-                if (input.Default.IsKey(VirtualKey.A))
+                if (input.IsKey(VirtualKey.A))
                     movement += camera.Left;
-                if (input.Default.IsKey(VirtualKey.D))
+                if (input.IsKey(VirtualKey.D))
                     movement += camera.Right;
                 movement = movement.LengthSquared() > 0 ? Vector3.Normalize(movement) : Vector3.Zero;
-                movement *= input.Default.IsKey(VirtualKey.SHIFT) ? 0.3f : 0.06f;
+                movement *= input.IsKey(VirtualKey.SHIFT) ? 0.3f : 0.06f;
                 if(Settings.Instance.Physics) {
                     camera.Position = ClampToWorld(camera.Position, movement);
                 }else {
                     camera.Position += movement;
                 }
-                if (input.Default.MouseCaptured) {
-                    var mpos = input.Default.DeltaMousePosition;
+                if (input.MouseCaptured) {
+                    var mpos = input.DeltaMousePosition;
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)(mpos.X) / 600);
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right , (float)(mpos.Y) / 600);
-                    if (input.Default.IsKeyDown(VirtualKey.LBUTTON)) {
+                    if (input.IsKeyDown(VirtualKey.LBUTTON)) {
                         Vector3? intersection = FindIntersection(false);
                         if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
                         }
                     }
-                    if (input.Default.IsKeyDown(VirtualKey.RBUTTON)) {
+                    if (input.IsKeyDown(VirtualKey.RBUTTON)) {
                         Vector3? intersection = FindIntersection(true);
                         if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
                             world.SetBlock(intersection.Value, Blocks.Air);
@@ -102,7 +97,7 @@ namespace SurviveCore {
                 }
             }
                
-            slot = Math.Abs(input.Default.MouseWheel / 120) % inventory.Length;
+            slot = Math.Abs(input.MouseWheel / 120) % inventory.Length;
             
             //if(Keyboard[Key.Left])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, -0.1f);
             //if(Keyboard[Key.Right]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, 0.1f);
@@ -180,7 +175,7 @@ namespace SurviveCore {
         private readonly Stopwatch fpstimer = Stopwatch.StartNew();
         private long fps;
         private int cfps = 1;
-        public void Draw() {
+        public void Draw(InputManager.InputState input) {
             if (fpstimer.ElapsedMilliseconds >= 130) {
                 fps = (Stopwatch.Frequency / (fpstimer.ElapsedTicks / cfps));
                 cfps = 0;
@@ -197,7 +192,8 @@ namespace SurviveCore {
             worldrenderer.Draw(dx.Context, camera);
             dx.Context.Rasterizer.State = defaultrenderstate;
 
-            if(input.Default.MouseCaptured) {
+            gui.Begin(input);
+            if(input.MouseCaptured) {
                 gui.Text(new Point(5,5), "Block: " + TextFormat.LightPink + inventory[slot].Name, size:30);
                 gui.Text(new Point(GetClientSize().Width/2, GetClientSize().Height/2), "+", size:25, origin:Origin.Center);
                 if (Settings.Instance.DebugInfo)
@@ -218,31 +214,23 @@ namespace SurviveCore {
                     Settings.Instance.ToggleDebugInfo();
                 if(gui.Button(new Rectangle(w + 180, h + 100, 300, 90), "Camera updates " + (!Settings.Instance.UpdateCamera ? "on" : "off")))
                     Settings.Instance.ToggleUpdateCamera();
-                if(gui.Button(new Rectangle(w + 180, h + 200, 300, 90), "VSync " + (!vsync ? "on" : "off")))
-                    vsync = !vsync;
-                if(gui.Button(new Rectangle(w + 180, h + 300, 300, 90), "Fullscreen " + (!dx.SwapChain.IsFullScreen ? "on" : "off")))
-                    dx.SwapChain.IsFullScreen = !dx.SwapChain.IsFullScreen;
+                if(gui.Button(new Rectangle(w + 180, h + 200, 300, 90), "VSync " + (!Settings.Instance.VSync ? "on" : "off")))
+                    Settings.Instance.ToggleVSync();
+                if(gui.Button(new Rectangle(w + 180, h + 300, 300, 90), "Fullscreen " + (!Settings.Instance.Fullscreen ? "on" : "off")))
+                    Settings.Instance.ToggleFullscreen();
             }
             
             gui.Render(dx.Context, GetClientSize());
-            dx.SwapChain.Present(vsync ? 1 : 0, 0);
+            dx.SwapChain.Present(Settings.Instance.VSync ? 1 : 0, 0);
+            if(Settings.Instance.Fullscreen != dx.SwapChain.IsFullScreen)
+                dx.SwapChain.IsFullScreen = Settings.Instance.Fullscreen;
         }
 
-        protected override void OnMouseWheel(ref MouseWheelPacket packet) {
-            base.OnMouseWheel(ref packet);
-            input.MouseWheelEvent = packet.WheelDelta;
-        }
-
-        protected override void OnSize(ref SizePacket packet) {
-            base.OnSize(ref packet);
-            dx.Resize(packet.Size);
-            camera.Aspect = (float) packet.Size.Width / packet.Size.Height;
-        }
-        
         protected override void Dispose(bool d) {
             base.Dispose(d);
             dx.Dispose();
             defaultrenderstate.Dispose();
+            wireframerenderstate.Dispose();
             world.Dispose();
             worldrenderer.Dispose();
             gui.Dispose();

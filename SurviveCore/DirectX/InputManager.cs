@@ -10,9 +10,6 @@ namespace SurviveCore.DirectX {
         private bool captured;
         private int wheelpos;
         private Point warpmousepos;
-
-        private InputState defaultstate;
-        public InputState Default => defaultstate ?? (defaultstate = new InputState(this));
         
         public InputManager(Window window) {
             this.window = window;
@@ -38,7 +35,6 @@ namespace SurviveCore.DirectX {
                 User32Methods.GetCursorPos(out Point p2);
                 warpmousepos.Offset(p1.X - p2.X, p1.Y - p2.Y);
             }
-            defaultstate?.Update();
         }
 
         public class InputState {

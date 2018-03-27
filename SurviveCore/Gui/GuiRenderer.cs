@@ -17,7 +17,7 @@ using Size = NetCoreEx.Geometry.Size;
 namespace SurviveCore.Gui {
     public class GuiRenderer : IDisposable {
 
-        private readonly InputManager.InputState input;
+        private InputManager.InputState input;
         
         private readonly VertexShader vs;
         private readonly PixelShader ps;
@@ -38,8 +38,7 @@ namespace SurviveCore.Gui {
         private int gquadnr;
         private int tquadnr;
         
-        public GuiRenderer(Device device, InputManager input) {
-            this.input = new InputManager.InputState(input);
+        public GuiRenderer(Device device) {
             guitexture = DDSLoader.LoadDDS(device, "./Assets/Gui/Gui.dds");
             font = new Font(device, "./Assets/Gui/Fonts/Abel.fnt");
             
@@ -100,6 +99,12 @@ namespace SurviveCore.Gui {
             });
         }
 
+        public void Begin(InputManager.InputState inputState) {
+            gquadnr = 0;
+            tquadnr = 0;
+            input = inputState;
+        }
+        
         public void Text(Point p, string text, Origin origin = Origin.TopLeft, int size = 20) {
             const int DeltaWidth = -6;
             const int DeltaHeight = -17;
@@ -285,8 +290,6 @@ namespace SurviveCore.Gui {
             context.DrawInstanced(6,tquadnr,0,textoffset);
             context.OutputMerger.BlendState = null;
             context.OutputMerger.DepthStencilState = state;
-            gquadnr = 0;
-            tquadnr = 0;
         }
         
         public void Dispose() {
