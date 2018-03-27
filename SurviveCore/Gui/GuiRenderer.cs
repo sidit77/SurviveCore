@@ -115,6 +115,63 @@ namespace SurviveCore.Gui {
                     x = 0;
                     continue;
                 }
+                if(text[i] == '§') {
+                    i++;
+                    switch(text[i]) {
+                        case '0':
+                            color = Color.Black.ToRgba();
+                            break;
+                        case '1':
+                            color = Color.DarkBlue.ToRgba();
+                            break;
+                        case '2':
+                            color = Color.DarkGreen.ToRgba();
+                            break;
+                        case '3':
+                            color = Color.DarkCyan.ToRgba();
+                            break;
+                        case '4':
+                            color = Color.DarkRed.ToRgba();
+                            break;
+                        case '5':
+                            color = Color.DarkMagenta.ToRgba();
+                            break;
+                        case '6':
+                            color = Color.Gold.ToRgba();
+                            break;
+                        case '7':
+                            color = Color.Gray.ToRgba();
+                            break;
+                        case '8':
+                            color = Color.DarkGray.ToRgba();
+                            break;
+                        case '9':
+                            color = Color.Blue.ToRgba();
+                            break;
+                        case 'a':
+                            color = Color.Green.ToRgba();
+                            break;
+                        case 'b':
+                            color = Color.Aqua.ToRgba();
+                            break;
+                        case 'c':
+                            color = Color.Red.ToRgba();
+                            break;
+                        case 'd':
+                            color = Color.LightPink.ToRgba();
+                            break;
+                        case 'e':
+                            color = Color.Yellow.ToRgba();
+                            break;
+                        case 'f':
+                            color = Color.White.ToRgba();
+                            break;
+                        default:
+                            Console.WriteLine("Error: unknown formatig code");
+                            break;
+                    }
+                    continue;
+                }
                 Font.CharInfo ci = font.GetCharInfo(text[i]);
                 int kerning = 0;
                 if (i > 0)
@@ -256,6 +313,25 @@ namespace SurviveCore.Gui {
 
     public enum Origin {
         TopLeft, TopRight, BottomLeft, BottomRight, Center
+    }
+
+    public static class TextFormat {
+        public const string Black = "§0";
+        public const string DarkBlue = "§1";
+        public const string DarkGreen = "§2";
+        public const string DarkCyan = "§3";
+        public const string DarkRed = "§4";
+        public const string DarkMagenta = "§5";
+        public const string Gold = "§6";
+        public const string Gray = "§7";
+        public const string DarkGray = "§8";
+        public const string Blue = "§9";
+        public const string Green = "§a";
+        public const string Aqua = "§b";
+        public const string Red = "§c";
+        public const string LightPink = "§d";
+        public const string Yellow = "§e";
+        public const string White = "§f";
     }
     
 }

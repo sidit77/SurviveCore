@@ -198,7 +198,7 @@ namespace SurviveCore {
             dx.Context.Rasterizer.State = defaultrenderstate;
 
             if(input.Default.MouseCaptured) {
-                gui.Text(new Point(5,5), "Block: " + inventory[slot].Name, size:30);
+                gui.Text(new Point(5,5), "Block: " + TextFormat.LightPink + inventory[slot].Name, size:30);
                 gui.Text(new Point(GetClientSize().Width/2, GetClientSize().Height/2), "+", size:25, origin:Origin.Center);
                 if (Settings.Instance.DebugInfo)
                     gui.Text(new Point(GetClientSize().Width-200, 5), "FPS: " + fps + "\n" + world.DebugText);
