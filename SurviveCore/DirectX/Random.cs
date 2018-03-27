@@ -23,7 +23,7 @@ namespace SurviveCore.DirectX {
         }
 
         public static int ToRgba(this Color c) {
-            return c.R << 24 | c.G << 16 | c.B << 8 | c.A;
+            return c.A << 24 | c.B << 16 | c.G << 8 | c.R;
         }
 
         public static RawVector2 Raw(this Vector2 v) {

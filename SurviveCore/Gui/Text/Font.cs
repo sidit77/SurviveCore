@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -12,7 +13,6 @@ namespace SurviveCore.Gui.Text{
     public class Font : IDisposable{
    
         private readonly ShaderResourceView texture;
-        private readonly ShaderResourceView chardata;
         private readonly Dictionary<char, CharInfo> charinfo;
         private readonly Dictionary<(char,char), int> kerning;
         private readonly int lineheight;
@@ -21,14 +21,12 @@ namespace SurviveCore.Gui.Text{
         public int Size => size;
         public int LineHeight => lineheight;
         public ShaderResourceView Texture => texture;
-        public ShaderResourceView CharData => chardata;
         
         public Font(Device device, string path) {
-            List<CharRenderData> charbufferdata = new List<CharRenderData>();
             charinfo = new Dictionary<char, CharInfo>();
             kerning = new Dictionary<(char, char), int>();
             string pagefile = "";
-            Vector2 pagesize = new Vector2();
+            Size pagesize = new Size();
             foreach (string line in File.ReadAllLines(path)) {
                 string[] tokens = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (tokens.Length <= 0)
@@ -46,10 +44,10 @@ namespace SurviveCore.Gui.Text{
                                 size = int.Parse(keyvalue[1]);
                                 break;
                             case "scaleW":
-                                pagesize.X = int.Parse(keyvalue[1]);
+                                pagesize.Width = int.Parse(keyvalue[1]);
                                 break;
                             case "scaleH":
-                                pagesize.Y = int.Parse(keyvalue[1]);
+                                pagesize.Height = int.Parse(keyvalue[1]);
                                 break;
                             case "pages":
                                 if (Int32.Parse(keyvalue[1]) != 1)
@@ -114,8 +112,7 @@ namespace SurviveCore.Gui.Text{
                                 break;
                         }
                     }
-                    charinfo.Add(c, new CharInfo(charbufferdata.Count, xo, yo, xa));
-                    charbufferdata.Add(new CharRenderData(x,y,w,h,pagesize));
+                    charinfo.Add(c, new CharInfo(x,y,w,h,xo,yo,xa,pagesize));
                 }
                 if (tokens[0].Equals("kerning")) {
                     char c1 = ' ', c2 = ' ';
@@ -140,13 +137,6 @@ namespace SurviveCore.Gui.Text{
                 }
             }
             texture = DDSLoader.LoadDDS(device, pagefile);
-            Buffer b = Buffer.Create(device, charbufferdata.ToArray(), new BufferDescription(
-                charbufferdata.Count * Marshal.SizeOf<CharRenderData>(), 
-                ResourceUsage.Immutable, BindFlags.ShaderResource, 
-                CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, 
-                Marshal.SizeOf<CharRenderData>()));
-            chardata = new ShaderResourceView(device, b);
-            b.Dispose();
         }
 
         public CharInfo GetCharInfo(char c) {
@@ -162,30 +152,16 @@ namespace SurviveCore.Gui.Text{
         
         public void Dispose() {
             texture.Dispose();
-            chardata.Dispose();
-        }
-
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        private struct CharRenderData {
-            private Vector2 TexMin;
-            private Vector2 TexSize;
-            private Vector2 Size;
-            
-            public CharRenderData(float x, float y, float w, float h, Vector2 pagesize) : this() {
-                TexMin = new Vector2(x, y) / pagesize;
-                TexSize = new Vector2(w, h) / pagesize;
-                Size = new Vector2(w, h);
-            }
         }
         
         public struct CharInfo {
-            public readonly int RenderId;
-            public readonly Vector2 Pos;
+            public readonly Rectangle Positon;
+            public readonly RectangleF Texture;
             public readonly int Advance;
             
-            public CharInfo(int id, float xOffset, float yOffset, int advance) {
-                RenderId = id;
-                Pos = new Vector2(xOffset, yOffset);
+            public CharInfo(int x, int y, int w, int h, int xOffset, int yOffset, int advance, Size pagesize) {
+                Positon = new Rectangle(xOffset, yOffset, w, h);
+                Texture = new RectangleF((float)x / pagesize.Width, (float)y / pagesize.Height, (float)w / pagesize.Width, (float)h / pagesize.Height);
                 Advance = advance;
             }
         }

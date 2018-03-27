@@ -80,4 +80,7 @@
   <ItemGroup>
     <ProjectReference Include="..\FastNoise\FastNoise.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Assets\Gui" />
+  </ItemGroup>
 </Project>

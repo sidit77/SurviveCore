@@ -27,8 +27,6 @@ namespace SurviveCore {
         private Camera camera;
         private WorldRenderer worldrenderer;
         private BlockWorld world;
-        private Font font;
-        private TextRenderer textrenderer;
         private GuiRenderer gui;
         
         protected override void OnCreate(ref CreateWindowPacket packet) {
@@ -53,10 +51,9 @@ namespace SurviveCore {
             worldrenderer = new WorldRenderer(dx.Device);
             world = new BlockWorld(worldrenderer);
 
-            font = new Font(dx.Device, "./Assets/Fonts/Abel.fnt");
-            textrenderer = new TextRenderer(dx.Device);
-            textrenderer.Screen = Matrix4x4.CreateOrthographicOffCenter(0,GetClientSize().Width, GetClientSize().Height, 0, -1, 1);
             gui = new GuiRenderer(dx.Device, input);
+
+            input.Default.MouseCaptured = true;
             
             GC.Collect();
         }
@@ -69,6 +66,8 @@ namespace SurviveCore {
 
         public void Update() {
             if (input.Default.IsForeground) {
+                if(input.Default.IsKeyDown(VirtualKey.ESCAPE))
+                    input.Default.MouseCaptured = !input.Default.MouseCaptured;
                 Vector3 movement = Vector3.Zero;
                 if (input.Default.IsKey(VirtualKey.W))
                     movement += camera.Forward;
@@ -89,6 +88,17 @@ namespace SurviveCore {
                     var mpos = input.Default.DeltaMousePosition;
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)(mpos.X) / 600);
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right , (float)(mpos.Y) / 600);
+                    if (input.Default.IsKeyDown(VirtualKey.LBUTTON)) {
+                        Vector3? intersection = FindIntersection(false);
+                        if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
+                        }
+                    }
+                    if (input.Default.IsKeyDown(VirtualKey.RBUTTON)) {
+                        Vector3? intersection = FindIntersection(true);
+                        if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
+                            world.SetBlock(intersection.Value, Blocks.Air);
+                        }
+                    }
                 }
             }
                
@@ -186,78 +196,36 @@ namespace SurviveCore {
             dx.Context.Rasterizer.State = Settings.Instance.Wireframe ? wireframerenderstate : defaultrenderstate;
             worldrenderer.Draw(dx.Context, camera);
             dx.Context.Rasterizer.State = defaultrenderstate;
-            
-            textrenderer.DrawText(dx.Context, new Vector2(5,5), font, "Block: " + inventory[slot].Name, Color.White, 25);//"The quick brown fox jumps over the lazy dog. 123456789"
-            textrenderer.DrawTextCentered(dx.Context, new Vector2(GetClientSize().Width/2, GetClientSize().Height/2), font, "+", Color.White, 25);
 
-            if(gui.Button(new Rectangle(50, 50, 400, 400), "Hallo")) {
-                Console.WriteLine("Hallo");
-            }
-            
-            if (Settings.Instance.DebugInfo) {
-                Text text = new Text(font, "FPS: " + fps + "\n" + world.DebugText);
-                textrenderer.DrawText(dx.Context, new Vector2(GetClientSize().Width-Math.Max(text.Size.Width - 6, 200), 5), text);
-            }
-            gui.Render(dx.Context);
-            dx.SwapChain.Present(vsync ? 1 : 0, 0);
-        }
-
-        protected override void OnKey(ref KeyPacket packet) {
-            base.OnKey(ref packet);
-            if(!packet.IsKeyDown || packet.InputState.IsPreviousKeyStatePressed)
-                return;
-            switch (packet.Key) {
-                case VirtualKey.ESCAPE:
-                    //if(input.Default.MouseCaptured)
-                        input.Default.MouseCaptured = !input.Default.MouseCaptured;
-                    break;
-                case VirtualKey.F1:
-                    Settings.Instance.ToggleUpdateCamera();
-                    break;
-                case VirtualKey.F2:
+            if(input.Default.MouseCaptured) {
+                gui.Text(new Point(5,5), "Block: " + inventory[slot].Name, size:30);
+                gui.Text(new Point(GetClientSize().Width/2, GetClientSize().Height/2), "+", size:25, origin:Origin.Center);
+                if (Settings.Instance.DebugInfo)
+                    gui.Text(new Point(GetClientSize().Width-200, 5), "FPS: " + fps + "\n" + world.DebugText);
+            } else {
+                int w = GetClientSize().Width  / 2 - 150;
+                int h = GetClientSize().Height / 2 - 200;
+                if(gui.Button(new Rectangle(w - 180, h +   0, 300, 90), "Wireframe " + (!Settings.Instance.Wireframe ? "on" : "off")))
                     Settings.Instance.ToggleWireframe();
-                    break;
-                case VirtualKey.F3:
+                if(gui.Button(new Rectangle(w - 180, h + 100, 300, 90), "Ambient Occlusion " + (!Settings.Instance.AmbientOcclusion ? "on" : "off")))
                     Settings.Instance.ToggleAmbientOcclusion();
-                    break;
-                case VirtualKey.F4:
+                if(gui.Button(new Rectangle(w - 180, h + 200, 300, 90), "Fog " + (!Settings.Instance.Fog ? "on" : "off")))
                     Settings.Instance.ToggleFog();
-                    break;
-                case VirtualKey.F5:
+                if(gui.Button(new Rectangle(w - 180, h + 300, 300, 90), "Physics " + (!Settings.Instance.Physics ? "on" : "off")))
                     Settings.Instance.TogglePhysics();
-                    break;
-                case VirtualKey.F6:
+                
+                if(gui.Button(new Rectangle(w + 180, h +  0, 300, 90), "Debug info " + (!Settings.Instance.DebugInfo ? "on" : "off")))
                     Settings.Instance.ToggleDebugInfo();
-                    break;
-                case VirtualKey.F11:
-                    dx.SwapChain.IsFullScreen = !dx.SwapChain.IsFullScreen;
-                    break;
-                case VirtualKey.F12:
+                if(gui.Button(new Rectangle(w + 180, h + 100, 300, 90), "Camera updates " + (!Settings.Instance.UpdateCamera ? "on" : "off")))
+                    Settings.Instance.ToggleUpdateCamera();
+                if(gui.Button(new Rectangle(w + 180, h + 200, 300, 90), "VSync " + (!vsync ? "on" : "off")))
                     vsync = !vsync;
-                    break;
-                case VirtualKey.SPACE:
-                    Console.WriteLine(ChunkLocation.FromPos(camera.Position));
-                    break;    
+                if(gui.Button(new Rectangle(w + 180, h + 300, 300, 90), "Fullscreen " + (!dx.SwapChain.IsFullScreen ? "on" : "off")))
+                    dx.SwapChain.IsFullScreen = !dx.SwapChain.IsFullScreen;
             }
-        }
-
-        protected override void OnMouseButton(ref MouseButtonPacket packet) {
-            base.OnMouseButton(ref packet);
-            if(!packet.IsButtonDown)
-                return;
-            //if(packet.Button == MouseButton.Left && !input.Default.MouseCaptured)
-            //    input.Default.MouseCaptured = true;
-            if (packet.Button == MouseButton.Left && input.Default.MouseCaptured) {
-                Vector3? intersection = FindIntersection(false);
-                if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
-                }
-            }
-            if (packet.Button == MouseButton.Right && input.Default.MouseCaptured) {
-                Vector3? intersection = FindIntersection(true);
-                if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
-                    world.SetBlock(intersection.Value, Blocks.Air);
-                }
-            }
+            
+            gui.Render(dx.Context, GetClientSize());
+            dx.SwapChain.Present(vsync ? 1 : 0, 0);
         }
 
         protected override void OnMouseWheel(ref MouseWheelPacket packet) {
@@ -269,7 +237,6 @@ namespace SurviveCore {
             base.OnSize(ref packet);
             dx.Resize(packet.Size);
             camera.Aspect = (float) packet.Size.Width / packet.Size.Height;
-            textrenderer.Screen = Matrix4x4.CreateOrthographicOffCenter(0,GetClientSize().Width, GetClientSize().Height, 0, -1, 1);
         }
         
         protected override void Dispose(bool d) {
@@ -278,8 +245,7 @@ namespace SurviveCore {
             defaultrenderstate.Dispose();
             world.Dispose();
             worldrenderer.Dispose();
-            font.Dispose();
-            textrenderer.Dispose();
+            gui.Dispose();
         }
 
     }
