@@ -1,7 +1,13 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Data.SQLite;
 using System.Diagnostics;
+using LiteDB;
 using NetCoreEx.Geometry;
 using SurviveCore.DirectX;
+using SurviveCore.World;
 using WinApi.Desktop;
 using WinApi.User32;
 using WinApi.Windows;
@@ -13,6 +19,18 @@ namespace SurviveCore {
 
         [STAThread]
         private static void Main(string[] args) {
+
+            BsonMapper.Global.RegisterType(
+                ci => new BsonDocument {
+                        ["X"] = ci.X,
+                        ["Y"] = ci.Y,
+                        ["Z"] = ci.Z
+                    },
+                bson => new ChunkLocation(bson.AsDocument["X"], bson.AsDocument["Y"], bson.AsDocument["Z"])
+            );
+            
+            WorldChunk.Register();
+            
             Console.WriteLine("Vector hardware acceleration: " + System.Numerics.Vector.IsHardwareAccelerated);
             try {
                 ApplicationHelpers.SetupDefaultExceptionHandlers();

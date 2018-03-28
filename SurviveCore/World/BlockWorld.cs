@@ -6,6 +6,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using LiteDB;
 using Priority_Queue;
 using SurviveCore.World.Rendering;
 
@@ -33,13 +34,16 @@ namespace SurviveCore.World {
         private readonly Stack<Chunk> chunkUnloadStack;
 	    private readonly HashSet<ChunkLocation> currentlyLoading;
 	    private readonly ConcurrentQueue<WorldChunk> loadedChunks;
-        
-        
+
+	    private LiteDatabase blockDatabase;
+	    private LiteCollection<WorldChunk> savedchunks;
 
 	    private readonly Stopwatch updateTimer;
 	    private int averageChunkUpdates;
 	    
         public BlockWorld(WorldRenderer renderer) {
+	        blockDatabase = new LiteDatabase("World.db");
+	        savedchunks = blockDatabase.GetCollection<WorldChunk>("chunks");
 	        this.renderer = renderer;
             meshUpdateQueue = new Queue<ChunkLocation>();
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
@@ -49,7 +53,7 @@ namespace SurviveCore.World {
 	        loadedChunks = new ConcurrentQueue<WorldChunk>();
             
             mesher = new ChunkMesher();
-            generator = new DefaultWorldGenerator((int)Stopwatch.GetTimestamp());
+            generator = new DefaultWorldGenerator(1337);//(int)Stopwatch.GetTimestamp()
 	        
 	        updateTimer = new Stopwatch();
 	        
@@ -83,7 +87,7 @@ namespace SurviveCore.World {
 	            
 	            UpdateChunkQueues();
             }
-		    UnloadChunks();
+		    UnloadChunks(false);
 		    LoadChunks();
 		    MeshChunks();
         }
@@ -145,11 +149,14 @@ namespace SurviveCore.World {
 			        continue;
 
 		        currentlyLoading.Add(l);
-		        
-		        WorldChunk chunk = WorldChunk.CreateWorldChunk(l, this);
-
+		       
 		        Task.Run(() => {
-			        generator.FillChunk(chunk);
+			        WorldChunk chunk = savedchunks.FindById(BsonMapper.Global.ToDocument(l));
+			        if(chunk == null) {
+				        chunk = new WorldChunk(l);
+				        generator.FillChunk(chunk);
+			        }
+			        chunk.SetWorld(this);
 			        loadedChunks.Enqueue(chunk);
 		        });
 	        }
@@ -165,13 +172,15 @@ namespace SurviveCore.World {
 	        
         }
 
-        private void UnloadChunks() {
+        private void UnloadChunks(bool final) {
             while (chunkUnloadStack.Count > 0) {
                 Chunk chunk = chunkUnloadStack.Pop();
-	            if(GetDistanceSquared(chunk.Location) < LoadDistance * LoadDistance)
+	            if(!final && GetDistanceSquared(chunk.Location) < LoadDistance * LoadDistance)
 		            continue;
                 chunkMap.Remove(chunk.Location);
                 chunk.CleanUp();
+	            if(chunk is WorldChunk wc && wc.IsDirty)
+	            	savedchunks.Upsert(wc);
             }
         }
         
@@ -207,8 +216,9 @@ namespace SurviveCore.World {
         public void Dispose() {
 	        foreach(Chunk c in chunkMap.Values)
 		        chunkUnloadStack.Push(c);
-	        UnloadChunks();
-            
+	        UnloadChunks(true);
+	        
+            blockDatabase.Dispose();
         }
 
     }
