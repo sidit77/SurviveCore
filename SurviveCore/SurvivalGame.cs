@@ -197,7 +197,10 @@ namespace SurviveCore {
                 gui.Text(new Point(5,5), "Block: " + TextFormat.LightPink + inventory[slot].Name, size:30);
                 gui.Text(new Point(GetClientSize().Width/2, GetClientSize().Height/2), "+", size:25, origin:Origin.Center);
                 if (Settings.Instance.DebugInfo)
-                    gui.Text(new Point(GetClientSize().Width-200, 5), "FPS: " + fps + "\n" + world.DebugText);
+                    gui.Text(new Point(GetClientSize().Width-200, 5), 
+                        "FPS: " + fps + "\n" + 
+                        "Pos: " + String.Format("[{0}|{1}|{2}]", (int)MathF.Round(camera.Position.X),(int)MathF.Round(camera.Position.Y),(int)MathF.Round(camera.Position.Z)) + "\n" +  
+                        world.DebugText);
             } else {
                 int w = GetClientSize().Width  / 2 - 150;
                 int h = GetClientSize().Height / 2 - 200;

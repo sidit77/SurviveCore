@@ -2,8 +2,11 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using LiteDB;
@@ -35,15 +38,17 @@ namespace SurviveCore.World {
 	    private readonly HashSet<ChunkLocation> currentlyLoading;
 	    private readonly ConcurrentQueue<WorldChunk> loadedChunks;
 
-	    private LiteDatabase blockDatabase;
-	    private LiteCollection<WorldChunk> savedchunks;
+	    private readonly LiteDatabase blockDatabase;
+	    private readonly LiteCollection<ChunkData> savedchunks;
+	    private readonly ChunkSerializer serializer;
 
 	    private readonly Stopwatch updateTimer;
 	    private int averageChunkUpdates;
 	    
         public BlockWorld(WorldRenderer renderer) {
 	        blockDatabase = new LiteDatabase("World.db");
-	        savedchunks = blockDatabase.GetCollection<WorldChunk>("chunks");
+	        savedchunks = blockDatabase.GetCollection<ChunkData>("chunks");
+	        serializer = new ChunkSerializer();
 	        this.renderer = renderer;
             meshUpdateQueue = new Queue<ChunkLocation>();
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
@@ -66,14 +71,15 @@ namespace SurviveCore.World {
 	    public string DebugText {
 		    get {
 			    StringBuilder sb = new StringBuilder();
-			    sb.AppendFormat("Loaded Chunks: {0}", chunkMap.Count)                  .Append("\n");
-			    sb.AppendFormat("Loading Queue: {0}", chunkLoadQueue.Count)            .Append("\n");
-			    sb.AppendFormat("Loading Tasks: {0}", currentlyLoading.Count)          .Append("\n");
-			    sb.AppendFormat("Meshing Queue: {0}", meshUpdateQueue.Count)           .Append("\n");
-			    sb.AppendFormat("Average Meshs: {0}", averageChunkUpdates)             .Append("\n");
-			    sb.AppendFormat("ChunkRenderer: {0}", renderer.NumberOfRenderers)      .Append("\n");
+			    sb.AppendFormat("Loaded Chunks: {0}", chunkMap.Count)                    .Append("\n");
+			    sb.AppendFormat("Loading Queue: {0}", chunkLoadQueue.Count)              .Append("\n");
+			    sb.AppendFormat("Loading Tasks: {0}", currentlyLoading.Count)            .Append("\n");
+			    sb.AppendFormat("Meshing Queue: {0}", meshUpdateQueue.Count)             .Append("\n");
+			    sb.AppendFormat("Average Meshs: {0}", averageChunkUpdates)               .Append("\n");
+			    sb.AppendFormat("ChunkRenderer: {0}", renderer.NumberOfRenderers)        .Append("\n");
 			    sb.AppendFormat("Rendered Chunks: {0}", renderer.CurrentlyRenderedChunks).Append("\n");
-			    sb.AppendFormat("AverMeshingTime: {0}", mesher.AverageChunkMeshingTime);
+			    sb.AppendFormat("AverMeshingTime: {0}", mesher.AverageChunkMeshingTime)  .Append("\n");
+			    sb.AppendFormat("AverSavingTime: {0}", savenr == 0 ? "N/A" : (savetimer.ElapsedTicks / savenr).ToString());
 			    return sb.ToString();
 		    }
 	    }
@@ -149,14 +155,16 @@ namespace SurviveCore.World {
 			        continue;
 
 		        currentlyLoading.Add(l);
-		       
+		        
+		        WorldChunk chunk = WorldChunk.CreateWorldChunk(l, this);
+		        
 		        Task.Run(() => {
-			        WorldChunk chunk = savedchunks.FindById(BsonMapper.Global.ToDocument(l));
-			        if(chunk == null) {
-				        chunk = new WorldChunk(l);
+					ChunkData data = savedchunks.FindById(l.ID);
+			        if(data == null) {
 				        generator.FillChunk(chunk);
+			        }else {
+				        serializer.Deserialize(chunk, data);
 			        }
-			        chunk.SetWorld(this);
 			        loadedChunks.Enqueue(chunk);
 		        });
 	        }
@@ -172,6 +180,9 @@ namespace SurviveCore.World {
 	        
         }
 
+	    private int savenr;
+	    private readonly Stopwatch savetimer = new Stopwatch();
+	    private readonly Stack<ChunkData> savedata = new Stack<ChunkData>();
         private void UnloadChunks(bool final) {
             while (chunkUnloadStack.Count > 0) {
                 Chunk chunk = chunkUnloadStack.Pop();
@@ -179,9 +190,19 @@ namespace SurviveCore.World {
 		            continue;
                 chunkMap.Remove(chunk.Location);
                 chunk.CleanUp();
-	            if(chunk is WorldChunk wc && wc.IsDirty)
-	            	savedchunks.Upsert(wc);
+	            if(true) {// && wc.IsDirty
+		            ChunkData d = serializer.Serialize(chunk);
+		            savedata.Push(d);
+	            }
             }
+
+	        if(savedata.Count > 0) {
+		        savetimer.Start();
+		        savedchunks.Upsert(savedata);
+		        savenr += savedata.Count;
+		        savedata.Clear();
+		        savetimer.Stop();
+	        }
         }
         
         private void MeshChunks() {
@@ -220,6 +241,116 @@ namespace SurviveCore.World {
 	        
             blockDatabase.Dispose();
         }
+	    
+	    private class ChunkData {
+		    public long Id { get; set; }
+		    public byte[] Meta { get; set; }
+		    public byte[] Blocks { get; set; }
+
+		    public ChunkData() {
+			    
+		    }
+		    
+		    public ChunkData(long id, byte[] meta, byte[] blocks) {
+			    Id = id;
+			    Meta = meta;
+			    Blocks = blocks;
+		    }
+	    }
+
+	    private class ChunkSerializer {
+
+		    private readonly byte[] cache;
+
+		    public ChunkSerializer() {
+			    cache = new byte[Chunk.Size * Chunk.Size * Chunk.Size * 2];
+		    }
+		    
+		    public unsafe ChunkData Serialize(Chunk c) {
+			    byte[] meta;
+			    byte[] blocks;
+			    fixed(byte* start = cache) {
+				    int size = 2;
+				    byte* pointer = start + 0;
+				    byte* counter = start + 1;
+				    (*pointer) = c.GetMetaDataDirect(0, 0, 0);
+				    (*counter) = 0;
+				    for(int x = 0; x < Chunk.Size; x++) {
+					    for(int y = 0; y < Chunk.Size; y++) {
+						    for(int z = 0; z < Chunk.Size; z++) {
+							    byte b = c.GetMetaDataDirect(x, y, z);
+							    if(b == *pointer && *counter < 255) {
+								    (*counter)++;
+							    }else {
+								    counter += 2;
+								    pointer += 2;
+								    size += 2;
+								    (*counter) = 1;
+								    (*pointer) = b;
+							    }
+						    }
+					    }
+				    }
+				    meta = new byte[size];
+				    Marshal.Copy((IntPtr)start,meta,0,size);
+				    
+				    size = 2;
+				    pointer = start + 0;
+				    counter = start + 1;
+				    (*pointer) = (byte)c.GetBlockDirect(0, 0, 0).ID;
+				    (*counter) = 0;
+				    for(int x = 0; x < Chunk.Size; x++) {
+					    for(int y = 0; y < Chunk.Size; y++) {
+						    for(int z = 0; z < Chunk.Size; z++) {
+							    byte b = (byte)c.GetBlockDirect(x, y, z).ID;
+							    if(b == *pointer && *counter < 255) {
+								    (*counter)++;
+							    }else {
+								    counter += 2;
+								    pointer += 2;
+								    size += 2;
+								    (*counter) = 1;
+								    (*pointer) = b;
+							    }
+						    }
+					    }
+				    }
+				    blocks = new byte[size];
+				    Marshal.Copy((IntPtr)start,blocks,0,size);
+			    }
+			    
+			    return new ChunkData(c.Location.ID, meta, blocks);
+		    }
+
+		    public unsafe void Deserialize(Chunk c, ChunkData cd) {
+			    fixed(byte* bstart = cd.Blocks)
+			    fixed(byte* mstart = cd.Meta) {
+				    byte* bpointer = bstart + 0;
+				    byte* bcounter = bstart + 1;
+				    byte* mpointer = mstart + 0;
+				    byte* mcounter = mstart + 1;
+
+				    for(int x = 0; x < Chunk.Size; x++) {
+					    for(int y = 0; y < Chunk.Size; y++) {
+						    for(int z = 0; z < Chunk.Size; z++) {
+							    if(*bcounter == 0) {
+								    bpointer += 2;
+								    bcounter += 2;
+							    }
+							    if(*mcounter == 0) {
+								    mpointer += 2;
+								    mcounter += 2;
+							    }
+							    c.SetBlockDirect(x, y, z, Block.GetBlock(*bpointer), *mpointer);
+							    (*bcounter)--;
+							    (*mcounter)--;
+						    }
+					    }
+				    }
+			    }
+		    }
+		    
+	    }
 
     }
 

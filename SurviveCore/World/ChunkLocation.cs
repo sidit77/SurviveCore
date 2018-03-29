@@ -6,7 +6,7 @@ namespace SurviveCore.World {
     
     public struct ChunkLocation {
 
-        private int x, y, z;
+        private readonly int x, y, z;
 
         public ChunkLocation(int x, int y, int z) {
             this.x = x;
@@ -22,6 +22,7 @@ namespace SurviveCore.World {
             return FromPos(pos.X, pos.Y, pos.Z);
         }
 
+        public long ID => ((long)x << 32) + (y << 16) + z;
         public Vector3 Min => new Vector3(x,y,z) * Chunk.Size;
         public Vector3 Max => Min + new Vector3(Chunk.Size);
         public int X => x;

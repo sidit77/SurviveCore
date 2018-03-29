@@ -17,19 +17,13 @@ using WinApi.Windows.Helpers;
 namespace SurviveCore {
     internal static class Program {
 
+        
         [STAThread]
         private static void Main(string[] args) {
 
-            BsonMapper.Global.RegisterType(
-                ci => new BsonDocument {
-                        ["X"] = ci.X,
-                        ["Y"] = ci.Y,
-                        ["Z"] = ci.Z
-                    },
-                bson => new ChunkLocation(bson.AsDocument["X"], bson.AsDocument["Y"], bson.AsDocument["Z"])
-            );
             
-            WorldChunk.Register();
+            //WorldChunk.Register();
+            
             
             Console.WriteLine("Vector hardware acceleration: " + System.Numerics.Vector.IsHardwareAccelerated);
             try {

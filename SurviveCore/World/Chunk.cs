@@ -12,6 +12,7 @@ namespace SurviveCore.World {
         public const int Size = 1 << BPC;
 
         protected ChunkLocation location;
+        protected bool dirty;
         
         public abstract Chunk FindChunk(ref int x, ref int y, ref int z);
         public abstract void SetNeighbor(int d, Chunk c, bool caller = true);
@@ -53,6 +54,7 @@ namespace SurviveCore.World {
         }
         
         public ChunkLocation Location => location;
+        public bool IsDirty => dirty;
 
         public override bool Equals(object obj) {
             return obj is Chunk o && o.location.Equals(location);
@@ -65,74 +67,26 @@ namespace SurviveCore.World {
 
     class WorldChunk : Chunk {
 
-        //private static readonly ObjectPool<WorldChunk> pool = new ObjectPool<WorldChunk>(256, () => new WorldChunk());
+        private static readonly ObjectPool<WorldChunk> pool = new ObjectPool<WorldChunk>(256, () => new WorldChunk());
 
         public static WorldChunk CreateWorldChunk(ChunkLocation l, BlockWorld w) {
-            WorldChunk c = new WorldChunk(l);//pool.Get();
-            c.SetWorld(w);
+            WorldChunk c = pool.Get();
+            c.SetUp(l, w);
             return c;
-        }
-
-        public static void Register(){
-            BsonMapper.Global.RegisterType(
-                wc => new BsonDocument {
-                    ["_id"] = BsonMapper.Global.ToDocument(wc.Location),
-                    ["data"] = wc.GetBlocks()
-                },
-                bson => {
-                    WorldChunk wc = new WorldChunk(BsonMapper.Global.ToObject<ChunkLocation>(bson.AsDocument["_id"].AsDocument));
-                    wc.SetBlocks(bson.AsDocument["data"]);
-                    return wc;
-                });
         }
         
         private int renderedblocks;
         private bool meshready;
-        private bool dirty;
         private readonly Chunk[] neighbors;
         private readonly Block[] blocks;
         private readonly byte[] metadata;
         private ChunkRenderer renderer;
         private BlockWorld world;
 
-        public bool IsDirty => dirty;
-        
-        public WorldChunk(ChunkLocation l){
+        private WorldChunk(){
             neighbors = new Chunk[]{BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance, BorderChunk.Instance};
             blocks = new Block[Size * Size * Size];
             metadata = new byte[Size * Size * Size];
-            
-            location = l;
-            renderedblocks = 0;
-            meshready = false;
-            dirty = false;
-            for (int i = 0; i < blocks.Length; i++)
-                blocks[i] = Blocks.Air;
-            for (int i = 0; i < metadata.Length; i++)
-                metadata[i] = 0;
-        }
-
-        private byte[] GetBlocks() {
-            byte[] b = new byte[blocks.Length + metadata.Length];
-            for(int i = 0; i < blocks.Length; i++) {
-                b[i * 2 + 0] = (byte)blocks[i].ID;
-                b[i * 2 + 1] = metadata[i];
-            }
-            return b;
-        }
-        
-        private void SetBlocks(byte[] b) {
-            
-            for(int bx = 0; bx < Chunk.Size; bx++) {
-                for(int by = 0; by < Chunk.Size; by++) {
-                    for(int bz = 0; bz < Chunk.Size; bz++) {
-                        SetBlockDirect(bx, by, bz, Block.GetBlock(b[(bx | (by << BPC) | (bz << 2 * BPC)) * 2 + 0]),b[(bx | (by << BPC) | (bz << 2 * BPC)) * 2 + 1]);
-                    }
-                }
-            }
-            
-            //for(int i = 0; i < blocks.Length; i++)
-            //    SetBlockDirect(i & BPC, (i >> BPC) & BPC, (i >> 2 * BPC) & BPC, Block.GetBlock(b[i * 2 + 0]),b[i * 2 + 1]);
         }
         
         public override void SetNeighbor(int d, Chunk c, bool caller = true) {
@@ -175,8 +129,7 @@ namespace SurviveCore.World {
                 world.Renderer.DisposeChunkRenderer(renderer);
                 renderer = null;
             }
-        
-            //pool.Add(this);
+            pool.Add(this);
             world = null;
         }
 
@@ -190,9 +143,16 @@ namespace SurviveCore.World {
             return renderedblocks == 0;
         }
 
-        public void SetWorld(BlockWorld world) {
-            
+        private void SetUp(ChunkLocation l, BlockWorld world) {
+            location = l;
             this.world = world;
+            renderedblocks = 0;
+            meshready = false;
+            dirty = false;
+            for (int i = 0; i < blocks.Length; i++)
+                blocks[i] = Blocks.Air;
+            for (int i = 0; i < metadata.Length; i++)
+                metadata[i] = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
