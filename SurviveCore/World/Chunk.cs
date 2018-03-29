@@ -12,7 +12,8 @@ namespace SurviveCore.World {
         public const int Size = 1 << BPC;
 
         protected ChunkLocation location;
-        protected bool dirty;
+        protected bool dirty = false;
+        protected bool generated = false;
         
         public abstract Chunk FindChunk(ref int x, ref int y, ref int z);
         public abstract void SetNeighbor(int d, Chunk c, bool caller = true);
@@ -55,6 +56,7 @@ namespace SurviveCore.World {
         
         public ChunkLocation Location => location;
         public bool IsDirty => dirty;
+        public bool IsGenerated => generated;
 
         public override bool Equals(object obj) {
             return obj is Chunk o && o.location.Equals(location);
@@ -107,6 +109,10 @@ namespace SurviveCore.World {
         public void SetMeshUpdates(bool enabled) {
             meshready = enabled;
         }
+
+        public void SetGenerated() {
+            generated = true;
+        }
         
         public override bool RegenerateMesh(ChunkMesher mesher) {
             Vertex[] m = mesher.GenerateMesh(this, world.Renderer.GetBlockMapping());
@@ -148,6 +154,7 @@ namespace SurviveCore.World {
             this.world = world;
             renderedblocks = 0;
             meshready = false;
+            generated = false;
             dirty = false;
             for (int i = 0; i < blocks.Length; i++)
                 blocks[i] = Blocks.Air;

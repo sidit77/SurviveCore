@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.SQLite;
 using System.Diagnostics;
+using System.Security.Authentication;
 using LiteDB;
 using NetCoreEx.Geometry;
 using SurviveCore.DirectX;
@@ -21,9 +22,14 @@ namespace SurviveCore {
         [STAThread]
         private static void Main(string[] args) {
 
-            
-            //WorldChunk.Register();
-            
+            BsonMapper.Global.RegisterType(
+                cl => new BsonDocument(new Dictionary<string, BsonValue>{
+                    ["X"] = cl.X,
+                    ["Y"] = cl.Y,
+                    ["Z"] = cl.Z,
+                }),
+                bd => new ChunkLocation(bd.AsDocument["X"].AsInt32,bd.AsDocument["Y"].AsInt32,bd.AsDocument["Z"].AsInt32)
+            );
             
             Console.WriteLine("Vector hardware acceleration: " + System.Numerics.Vector.IsHardwareAccelerated);
             try {

@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using SurviveCore.Debug;
 
 namespace SurviveCore.World.Rendering {
     
@@ -17,24 +18,22 @@ namespace SurviveCore.World.Rendering {
         private int u, v, d, axis;
         private int n, k, l;
         private bool done;
-        
+
+        private readonly AverageTimer timer;
+
         public ChunkMesher() {
             vertices = new List<Vertex>();
             mask = new BlockFace[Chunk.Size * Chunk.Size];
-            timer = new Stopwatch();
+            timer = new AverageTimer();
         }
 
-        private Stopwatch timer;
-        private long nrofch;
-
-        public long AverageChunkMeshingTime => (timer.ElapsedTicks / nrofch);
+        public long AverageChunkMeshingTime => timer.AverageTicks;
         
         public Vertex[] GenerateMesh(Chunk chunk, ImmutableDictionary<string, int> blockmapping) {
             if(chunk.isEmpty())
                 return null;
             
             timer.Start();
-            nrofch++;
             
             int x = chunk.Location.WX;
             int y = chunk.Location.WY;

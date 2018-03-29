@@ -21,8 +21,7 @@ namespace SurviveCore.World {
         public static ChunkLocation FromPos(Vector3 pos) {
             return FromPos(pos.X, pos.Y, pos.Z);
         }
-
-        public long ID => ((long)x << 32) + (y << 16) + z;
+        
         public Vector3 Min => new Vector3(x,y,z) * Chunk.Size;
         public Vector3 Max => Min + new Vector3(Chunk.Size);
         public int X => x;
