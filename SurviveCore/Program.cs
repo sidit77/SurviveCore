@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data.Common;
-using System.Data.SQLite;
 using System.Diagnostics;
-using System.Security.Authentication;
+using System.Numerics;
 using LiteDB;
-using NetCoreEx.Geometry;
 using SurviveCore.DirectX;
 using SurviveCore.World;
 using WinApi.Desktop;
@@ -31,7 +27,7 @@ namespace SurviveCore {
                 bd => new ChunkLocation(bd.AsDocument["X"].AsInt32,bd.AsDocument["Y"].AsInt32,bd.AsDocument["Z"].AsInt32)
             );
             
-            Console.WriteLine("Vector hardware acceleration: " + System.Numerics.Vector.IsHardwareAccelerated);
+            Console.WriteLine("Vector hardware acceleration: " + Vector.IsHardwareAccelerated);
             try {
                 ApplicationHelpers.SetupDefaultExceptionHandlers();
 

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Text;
 
 namespace SurviveCore.World.Rendering {
     internal static class AmbientOcclusion {

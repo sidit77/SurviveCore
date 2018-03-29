@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using SharpDX.Direct3D11;
-using SurviveCore.DirectX;
 using Buffer = SharpDX.Direct3D11.Buffer;
 
 namespace SurviveCore.World.Rendering {

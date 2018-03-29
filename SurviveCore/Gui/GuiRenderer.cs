@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Drawing;
-using System.Net.Http.Headers;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using SharpDX.D3DCompiler;
-using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using SurviveCore.DirectX;

@@ -44,6 +44,7 @@
 #if FN_USE_DOUBLES
 using FN_DECIMAL = System.Double;
 #else
+using System.Runtime.CompilerServices;
 using System;
 using FN_DECIMAL = System.Single;
 #endif

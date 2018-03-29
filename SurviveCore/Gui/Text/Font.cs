@@ -2,12 +2,8 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Numerics;
-using System.Runtime.InteropServices;
 using SharpDX.Direct3D11;
 using SurviveCore.DirectX;
-using Buffer = SharpDX.Direct3D11.Buffer;
-using Device = SharpDX.Direct3D11.Device;
 
 namespace SurviveCore.Gui.Text{
     public class Font : IDisposable{

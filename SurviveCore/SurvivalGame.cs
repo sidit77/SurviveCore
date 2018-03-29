@@ -2,13 +2,9 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
-using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
-using System.Xml;
 using SharpDX.Direct3D11;
 using SurviveCore.DirectX;
 using SurviveCore.Gui;
-using SurviveCore.Gui.Text;
 using SurviveCore.World;
 using SurviveCore.World.Rendering;
 using WinApi.User32;
