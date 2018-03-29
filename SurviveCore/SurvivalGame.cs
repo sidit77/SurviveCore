@@ -37,13 +37,14 @@ namespace SurviveCore {
                 FillMode = FillMode.Wireframe
             });
             
+            worldrenderer = new WorldRenderer(dx.Device);
+            world = new BlockWorld(worldrenderer, out Vector3 playerpos);
             
             camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.1f, 300.0f) {
-                Position = new Vector3(8, 50, 8)
+                Position = playerpos
             };
             
-            worldrenderer = new WorldRenderer(dx.Device);
-            world = new BlockWorld(worldrenderer);
+            
 
             gui = new GuiRenderer(dx.Device);
             
@@ -181,7 +182,7 @@ namespace SurviveCore {
             
             camera.Update(Settings.Instance.UpdateCamera);
             if(Settings.Instance.UpdateCamera)
-                world.Update((int)Math.Floor(camera.Position.X) >> Chunk.BPC, (int)Math.Floor(camera.Position.Z) >> Chunk.BPC);
+                world.Update(camera.Position);
 
             dx.Clear(Color.DarkSlateGray);
             dx.Context.Rasterizer.State = Settings.Instance.Wireframe ? wireframerenderstate : defaultrenderstate;

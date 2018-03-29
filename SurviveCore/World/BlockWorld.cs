@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -22,7 +23,8 @@ namespace SurviveCore.World {
         public const int LoadDistance = 16;
 	    public const int UnloadDistance = LoadDistance + 1;
 
-        
+
+	    private Vector3 playerpos;
         private int centerX;
 	    private int centerZ;
 
@@ -48,12 +50,17 @@ namespace SurviveCore.World {
 	    private readonly AverageTimer savingtimer;
 	    private readonly AverageTimer loadingtimer;
 	    
-        public BlockWorld(WorldRenderer renderer) {
+        public BlockWorld(WorldRenderer renderer, out Vector3 pos) {
 	        blockDatabase = new LiteDatabase("World.db");
 	        savedchunks = blockDatabase.GetCollection<ChunkData>("chunks");
-	        if(!blockDatabase.CollectionExists("settings"))
+	        if(!blockDatabase.CollectionExists("settings")) {
 		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("seed", new Random().Next()));
-		    serializer = new ChunkSerializer();
+		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("playerX",  0));
+		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("playerY", 50));
+		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("playerZ",  0));
+	        }
+
+	        serializer = new ChunkSerializer();
 	        this.renderer = renderer;
             meshUpdateQueue = new Queue<ChunkLocation>();
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
@@ -70,7 +77,13 @@ namespace SurviveCore.World {
 	        
 	        savingtimer = new AverageTimer();
 	        loadingtimer = new AverageTimer();
-	        
+
+	        pos = new Vector3 {
+		        X = blockDatabase.GetCollection<Setting>("settings").FindById("playerX").Value,
+		        Y = blockDatabase.GetCollection<Setting>("settings").FindById("playerY").Value,
+		        Z = blockDatabase.GetCollection<Setting>("settings").FindById("playerZ").Value
+	        };
+
 	        UpdateChunkQueues();
 	        
         }
@@ -94,7 +107,10 @@ namespace SurviveCore.World {
 		    }
 	    }
 	    
-        public void Update(int cx, int cz) {
+        public void Update(Vector3 pos) {
+	        playerpos = pos;
+	        int cx = (int)Math.Floor(pos.X) >> Chunk.BPC;
+	        int cz = (int)Math.Floor(pos.Z) >> Chunk.BPC;
             updateTimer.Restart();
             if(centerX != cx || centerZ != cz) {
 	            
@@ -247,10 +263,15 @@ namespace SurviveCore.World {
 	        foreach(Chunk c in chunkMap.Values)
 		        chunkUnloadStack.Push(c);
 	        UnloadChunks(true);
-	        
+	        blockDatabase.GetCollection<Setting>("settings").Update(new Setting("playerX", (int)MathF.Round(playerpos.X)));
+	        blockDatabase.GetCollection<Setting>("settings").Update(new Setting("playerY", (int)MathF.Round(playerpos.Y)));
+	        blockDatabase.GetCollection<Setting>("settings").Update(new Setting("playerZ", (int)MathF.Round(playerpos.Z)));
             blockDatabase.Dispose();
         }
 	    
+	    [SuppressMessage("ReSharper", "MemberCanBePrivate.Local")]
+	    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
+	    [SuppressMessage("ReSharper", "UnusedMember.Local")]
 	    private class ChunkData {
 		    public ChunkLocation Id { get; set; }
 		    public byte[] Meta { get; set; }
@@ -361,6 +382,9 @@ namespace SurviveCore.World {
 		    
 	    }
 
+	    [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+	    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
+	    [SuppressMessage("ReSharper", "UnusedMember.Global")]
 	    public class Setting {
 		    [BsonId]
 		    public string Name { get; set; }
