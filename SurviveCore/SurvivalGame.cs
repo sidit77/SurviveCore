@@ -80,12 +80,12 @@ namespace SurviveCore {
                     var mpos = input.DeltaMousePosition;
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)(mpos.X) / 600);
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right , (float)(mpos.Y) / 600);
-                    if (input.IsKeyDown(VirtualKey.LBUTTON)) {
+                    if (input.IsKeyDown(VirtualKey.LBUTTON) || input.IsKeyDown(VirtualKey.Q)) {
                         Vector3? intersection = FindIntersection(false);
                         if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
                         }
                     }
-                    if (input.IsKeyDown(VirtualKey.RBUTTON)) {
+                    if (input.IsKeyDown(VirtualKey.RBUTTON) || input.IsKeyDown(VirtualKey.E)) {
                         Vector3? intersection = FindIntersection(true);
                         if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
                             world.SetBlock(intersection.Value, Blocks.Air);

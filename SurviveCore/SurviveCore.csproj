@@ -24,7 +24,6 @@
     <PackageReference Include="SharpDX.D3DCompiler" Version="4.1.0-ci217" />
     <PackageReference Include="SharpDX.Direct3D11" Version="4.1.0-ci217" />
     <PackageReference Include="SharpDX.DXGI" Version="4.1.0-ci217" />
-    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.108" />
     <PackageReference Include="WinApi" Version="4.0.0" />
     <PackageReference Include="WinApi.Desktop" Version="4.0.0" />
     <PackageReference Include="WinApi.Windows.Controls" Version="4.0.0" />
