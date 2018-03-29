@@ -226,6 +226,12 @@ namespace SurviveCore {
                 dx.SwapChain.IsFullScreen = Settings.Instance.Fullscreen;
         }
 
+        protected override void OnSize(ref SizePacket packet) {
+            base.OnSize(ref packet);
+            dx.Resize(packet.Size);
+            camera.Aspect = (float)packet.Size.Width / packet.Size.Height;
+        }
+
         protected override void Dispose(bool d) {
             base.Dispose(d);
             dx.Dispose();

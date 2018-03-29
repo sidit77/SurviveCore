@@ -51,7 +51,7 @@ namespace SurviveCore.World {
 	    private readonly AverageTimer loadingtimer;
 	    
         public BlockWorld(WorldRenderer renderer, out Vector3 pos) {
-	        blockDatabase = new LiteDatabase("World.db");
+	        blockDatabase = new LiteDatabase("./Assets/World.db");
 	        savedchunks = blockDatabase.GetCollection<ChunkData>("chunks");
 	        if(!blockDatabase.CollectionExists("settings")) {
 		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("seed", new Random().Next()));
