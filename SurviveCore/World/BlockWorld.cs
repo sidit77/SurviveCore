@@ -51,7 +51,9 @@ namespace SurviveCore.World {
         public BlockWorld(WorldRenderer renderer) {
 	        blockDatabase = new LiteDatabase("World.db");
 	        savedchunks = blockDatabase.GetCollection<ChunkData>("chunks");
-	        serializer = new ChunkSerializer();
+	        if(!blockDatabase.CollectionExists("settings"))
+		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("seed", new Random().Next()));
+		    serializer = new ChunkSerializer();
 	        this.renderer = renderer;
             meshUpdateQueue = new Queue<ChunkLocation>();
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
@@ -62,7 +64,7 @@ namespace SurviveCore.World {
 	        savedata = new Stack<ChunkData>();
             
             mesher = new ChunkMesher();
-            generator = new DefaultWorldGenerator(1337);//(int)Stopwatch.GetTimestamp()
+            generator = new DefaultWorldGenerator(blockDatabase.GetCollection<Setting>("settings").FindById("seed").Value);//(int)Stopwatch.GetTimestamp()
 	        
 	        updateTimer = new Stopwatch();
 	        
@@ -132,7 +134,6 @@ namespace SurviveCore.World {
         public bool SetBlock(Vector3 vec, Block b, byte m) {
             return SetBlock((int)Math.Round(vec.X), (int)Math.Round(vec.Y), (int)Math.Round(vec.Z), b, m);
         }
-
         
 	    private void UpdateChunkQueues() {
 		    for (int x = -LoadDistance; x <= LoadDistance; x++) {
@@ -360,6 +361,20 @@ namespace SurviveCore.World {
 		    
 	    }
 
+	    public class Setting {
+		    [BsonId]
+		    public string Name { get; set; }
+		    public int Value { get; set; }
+
+		    public Setting() {
+		    }
+
+		    public Setting(string name, int value) {
+			    Name = name;
+			    Value = value;
+		    }
+	    }
+	    
     }
 
 }
