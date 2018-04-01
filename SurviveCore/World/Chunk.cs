@@ -120,7 +120,7 @@ namespace SurviveCore.World {
                 renderer = world.Renderer.CreateChunkRenderer(this);
             if(m != null)
                 renderer.Update(m);
-            //TODO free chunkrenderer instead of deleting it.
+            //TODO free chunkrenderer instead of deleting it. 
             renderer?.SetActive(m != null);
             return true;
         }
