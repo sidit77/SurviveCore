@@ -225,8 +225,6 @@ namespace SurviveCore.World {
 		            savedata.Push(d);
 	            }
             }
-
-	        
 	        
 	        if(savedata.Count > 0) {
 		        savingtimer.Start();

@@ -19,7 +19,7 @@ namespace SurviveCore.World.Rendering {
     
     public class WorldRenderer : IDisposable{
 
-        private const int RendererPoolSize = 256;
+        private const int RendererPoolSize = 512;
         
         private readonly ObjectPool<ChunkRenderer> rendererPool;
         private readonly HashSet<ChunkRenderer> renderer;

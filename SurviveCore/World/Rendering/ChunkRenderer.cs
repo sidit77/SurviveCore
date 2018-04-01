@@ -16,8 +16,7 @@ namespace SurviveCore.World.Rendering {
         private int size;
 
         internal ChunkRenderer(Device dx) {
-            this.device = dx;
-
+            device = dx;
             binding = new VertexBufferBinding(null, Marshal.SizeOf<Vertex>(), 0);
         }
 
