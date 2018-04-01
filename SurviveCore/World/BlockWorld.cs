@@ -42,13 +42,13 @@ namespace SurviveCore.World {
 
 	    private readonly LiteDatabase blockDatabase;
 	    private readonly LiteCollection<ChunkData> savedchunks;
-	    private readonly ChunkSerializer serializer;
 
 	    private readonly Stopwatch updateTimer;
 	    private int averageChunkUpdates;
 
 	    private readonly AverageTimer savingtimer;
 	    private readonly AverageTimer loadingtimer;
+	    private readonly AverageTimer compresstimer;
 	    
         public BlockWorld(WorldRenderer renderer, out Vector3 pos) {
 	        blockDatabase = new LiteDatabase("./Assets/World.db");
@@ -60,7 +60,6 @@ namespace SurviveCore.World {
 		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("playerZ",  0));
 	        }
 
-	        serializer = new ChunkSerializer();
 	        this.renderer = renderer;
             meshUpdateQueue = new Queue<ChunkLocation>();
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
@@ -77,6 +76,7 @@ namespace SurviveCore.World {
 	        
 	        savingtimer = new AverageTimer();
 	        loadingtimer = new AverageTimer();
+	        compresstimer = new AverageTimer();
 
 	        pos = new Vector3 {
 		        X = blockDatabase.GetCollection<Setting>("settings").FindById("playerX").Value,
@@ -102,6 +102,7 @@ namespace SurviveCore.World {
 			    sb.AppendFormat("Rendered Chunks: {0}", renderer.CurrentlyRenderedChunks).Append("\n");
 			    sb.AppendFormat("AverMeshingTime: {0}", mesher.AverageChunkMeshingTime)  .Append("\n");
 			    sb.AppendFormat("AveraSavingTime: {0}", savingtimer.AverageTicks)        .Append("\n");
+			    sb.AppendFormat("AveCompressTime: {0}", compresstimer.AverageTicks)        .Append("\n");
 			    sb.AppendFormat("AverLoadingTime: {0}", loadingtimer.AverageTicks);
 			    return sb.ToString();
 		    }
@@ -191,7 +192,7 @@ namespace SurviveCore.World {
 				    if(data == null) {
 				        generator.FillChunk(chunk);
 				    }else {
-				    	serializer.Deserialize(chunk, data);
+				    	ChunkSerializer.Deserialize(chunk, data);
 				    }
 				    loadedChunks.Enqueue(chunk);
 			    });
@@ -209,6 +210,7 @@ namespace SurviveCore.World {
 	        
         }
 
+	    
         private void UnloadChunks(bool final) {
             while (chunkUnloadStack.Count > 0) {
                 Chunk chunk = chunkUnloadStack.Pop();
@@ -217,7 +219,9 @@ namespace SurviveCore.World {
                 chunkMap.Remove(chunk.Location);
                 chunk.CleanUp();
 	            if(chunk.IsDirty || chunk.IsGenerated) {
-		            ChunkData d = serializer.Serialize(chunk);
+		            compresstimer.Start();
+		            ChunkData d = ChunkSerializer.Serialize(chunk);
+		            compresstimer.Stop();
 		            savedata.Push(d);
 	            }
             }
@@ -288,71 +292,63 @@ namespace SurviveCore.World {
 		    }
 	    }
 
-	    private class ChunkSerializer {
+	    private static class ChunkSerializer {
 
-		    private readonly byte[] cache;
-
-		    public ChunkSerializer() {
-			    cache = new byte[Chunk.Size * Chunk.Size * Chunk.Size * 2];
-		    }
-		    
-		    public unsafe ChunkData Serialize(Chunk c) {
-			    byte[] meta;
-			    byte[] blocks;
-			    fixed(byte* start = cache) {
-				    int size = 2;
-				    byte* pointer = start + 0;
-				    byte* counter = start + 1;
-				    (*pointer) = c.GetMetaDataDirect(0, 0, 0);
-				    (*counter) = 0;
-				    for(int x = 0; x < Chunk.Size; x++) {
-					    for(int y = 0; y < Chunk.Size; y++) {
-						    for(int z = 0; z < Chunk.Size; z++) {
-							    byte b = c.GetMetaDataDirect(x, y, z);
-							    if(b == *pointer && *counter < 255) {
-								    (*counter)++;
-							    }else {
-								    counter += 2;
-								    pointer += 2;
-								    size += 2;
-								    (*counter) = 1;
-								    (*pointer) = b;
-							    }
+		    public static unsafe ChunkData Serialize(Chunk c) {
+			    byte* start = stackalloc byte[Chunk.Size * Chunk.Size * Chunk.Size];
+				int size = 2;
+				byte* pointer = start + 0;
+				byte* counter = start + 1;
+				(*pointer) = c.GetMetaDataDirect(0, 0, 0);
+				(*counter) = 0;
+				for(int x = 0; x < Chunk.Size; x++) {
+				    for(int y = 0; y < Chunk.Size; y++) {
+					    for(int z = 0; z < Chunk.Size; z++) {
+						    byte b = c.GetMetaDataDirect(x, y, z);
+						    if(b == *pointer && *counter < 255) {
+							    (*counter)++;
+						    }else {
+							    counter += 2;
+							    pointer += 2;
+							    size += 2;
+							    (*counter) = 1;
+							    (*pointer) = b;
 						    }
 					    }
 				    }
-				    meta = new byte[size];
-				    Marshal.Copy((IntPtr)start,meta,0,size);
-				    
-				    size = 2;
-				    pointer = start + 0;
-				    counter = start + 1;
-				    (*pointer) = (byte)c.GetBlockDirect(0, 0, 0).ID;
-				    (*counter) = 0;
-				    for(int x = 0; x < Chunk.Size; x++) {
-					    for(int y = 0; y < Chunk.Size; y++) {
-						    for(int z = 0; z < Chunk.Size; z++) {
-							    byte b = (byte)c.GetBlockDirect(x, y, z).ID;
-							    if(b == *pointer && *counter < 255) {
-								    (*counter)++;
-							    }else {
-								    counter += 2;
-								    pointer += 2;
-								    size += 2;
-								    (*counter) = 1;
-								    (*pointer) = b;
-							    }
+				}
+				byte[] meta = new byte[size];
+				Marshal.Copy((IntPtr)start,meta,0,size);
+				
+				size = 2;
+				pointer = start + 0;
+				counter = start + 1;
+				(*pointer) = (byte)c.GetBlockDirect(0, 0, 0).ID;
+				(*counter) = 0;
+				for(int x = 0; x < Chunk.Size; x++) {
+				    for(int y = 0; y < Chunk.Size; y++) {
+					    for(int z = 0; z < Chunk.Size; z++) {
+						    byte b = (byte)c.GetBlockDirect(x, y, z).ID;
+						    if(b == *pointer && *counter < 255) {
+							    (*counter)++;
+						    }else {
+							    counter += 2;
+							    pointer += 2;
+							    size += 2;
+							    (*counter) = 1;
+							    (*pointer) = b;
 						    }
 					    }
 				    }
-				    blocks = new byte[size];
-				    Marshal.Copy((IntPtr)start,blocks,0,size);
-			    }
+				}
+				byte[] blocks = new byte[size];
+				Marshal.Copy((IntPtr)start,blocks,0,size);
+			    
 			    
 			    return new ChunkData(c.Location, meta, blocks);
 		    }
 
-		    public unsafe void Deserialize(Chunk c, ChunkData cd) {
+		    public static unsafe void Deserialize(Chunk c, ChunkData cd) {
 			    fixed(byte* bstart = cd.Blocks)
 			    fixed(byte* mstart = cd.Meta) {
 				    byte* bpointer = bstart + 0;
