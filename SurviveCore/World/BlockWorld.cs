@@ -226,6 +226,8 @@ namespace SurviveCore.World {
 	            }
             }
 
+	        
+	        
 	        if(savedata.Count > 0) {
 		        savingtimer.Start();
 		        savedchunks.Upsert(savedata);
@@ -237,9 +239,9 @@ namespace SurviveCore.World {
         private void MeshChunks() {
 	        int i = 0;
             while (meshUpdateQueue.Count > 0) {
-	            if (chunkMap.TryGetValue(meshUpdateQueue.Dequeue(), out Chunk c))
+	            if(chunkMap.TryGetValue(meshUpdateQueue.Dequeue(), out Chunk c))
 		            c.RegenerateMesh(mesher);
-	            i++;
+		        i++;
 				if(updateTimer.ElapsedMilliseconds >= MaxUpdateTime)
 					break;
             }
@@ -254,7 +256,7 @@ namespace SurviveCore.World {
 	    
         public void QueueChunkForRemesh(Chunk c) {
 	        if(!meshUpdateQueue.Contains(c.Location))
-            	meshUpdateQueue.Enqueue(c.Location);
+		        meshUpdateQueue.Enqueue(c.Location);
         }
 
 	    private int GetDistanceSquared(ChunkLocation l, bool y = false) {
