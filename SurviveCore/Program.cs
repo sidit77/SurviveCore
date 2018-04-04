@@ -1,20 +1,83 @@
 ﻿using System;
-using OpenTK;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Numerics;
+using LiteDB;
+using SurviveCore.DirectX;
+using SurviveCore.World;
+using WinApi.Desktop;
+using WinApi.User32;
+using WinApi.Windows;
+using WinApi.Windows.Controls;
+using WinApi.Windows.Helpers;
 
 namespace SurviveCore {
     internal static class Program {
 
+        
         [STAThread]
         private static void Main(string[] args) {
-            Console.WriteLine("Vector hardware acceleration: " + System.Numerics.Vector.IsHardwareAccelerated);
-            using(var game = new SurvivalGame()) {
-                game.Title = "Test Game";
-                game.VSync = VSyncMode.Adaptive;
-                game.X = (DisplayDevice.GetDisplay(DisplayIndex.Default).Width - game.Width) / 2;
-                game.Y = (DisplayDevice.GetDisplay(DisplayIndex.Default).Height - game.Height) / 2;
+
+            BsonMapper.Global.RegisterType(
+                cl => new BsonDocument(new Dictionary<string, BsonValue>{
+                    ["X"] = cl.X,
+                    ["Y"] = cl.Y,
+                    ["Z"] = cl.Z,
+                }),
+                bd => new ChunkLocation(bd.AsDocument["X"].AsInt32,bd.AsDocument["Y"].AsInt32,bd.AsDocument["Z"].AsInt32)
+            );
             
-                game.Run(120);
+            Console.WriteLine("Vector hardware acceleration: " + Vector.IsHardwareAccelerated);
+            try {
+                ApplicationHelpers.SetupDefaultExceptionHandlers();
+
+                using (var win = Window.Create<SurvivalGame>(text: "Hello", width: 1280, height: 720)) {
+                    win.CenterToScreen();
+                    win.Show();
+            
+                    void DestroyHandler() => MessageHelpers.PostQuitMessage();
+                    win.Destroyed += DestroyHandler;
+            
+                    long lastupdated = Stopwatch.GetTimestamp();
+                    long updatetick = (long)(1f / 200 * Stopwatch.Frequency);
+                    
+                    InputManager inputManager = new InputManager(win);
+                    InputManager.InputState renderinput = new InputManager.InputState(inputManager);
+                    InputManager.InputState updateinput = new InputManager.InputState(inputManager);
+                    
+                    Message msg = new Message();
+                    while (msg.Value != (uint)WM.QUIT) {
+                        if (User32Helpers.PeekMessage(out msg, IntPtr.Zero, 0, 0, PeekMessageFlags.PM_REMOVE)) {
+                            if(msg.Value == (uint)WM.MOUSEWHEEL) {
+                                unsafe {
+                                    WindowMessage wm = new WindowMessage(msg.Hwnd, msg.Value, msg.WParam, msg.LParam);
+                                    MouseWheelPacket p = new MouseWheelPacket(&wm);
+                                    inputManager.MouseWheelEvent = p.WheelDelta;
+                                }
+                            }
+                            User32Methods.TranslateMessage(ref msg);
+                            User32Methods.DispatchMessage(ref msg);
+                        } else {
+                            while (lastupdated + updatetick < Stopwatch.GetTimestamp()) {
+                                win.Update(updateinput);
+                                updateinput.Update();
+                                lastupdated += updatetick;
+                            }
+                            win.Draw(renderinput);
+                            win.Validate();
+                            inputManager.Update();
+                            renderinput.Update();
+                        }
+                    }
+            
+                    win.Destroyed -= DestroyHandler;
+                }
+            
+            } catch (Exception ex) {
+                MessageBoxHelpers.Show(ex.Message);
+                Console.WriteLine(ex);
             }
+            
         }
 
     }

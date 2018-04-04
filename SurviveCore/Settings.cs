@@ -11,6 +11,8 @@
         private bool physics;
         private bool updatecamera;
         private bool debuginfo;
+        private bool vsync;
+        private bool fullscreen;
 
         public Settings() {
             wireframe = false;
@@ -19,8 +21,20 @@
             physics = true;
             updatecamera = true;
             debuginfo = false;
+            vsync = true;
+            fullscreen = false;
         }
-        
+
+        public bool Fullscreen {
+            get => fullscreen;
+            set => fullscreen = value;
+        }
+
+        public bool VSync {
+            get => vsync;
+            set => vsync = value;
+        }
+
         public bool DebugInfo {
             get => debuginfo;
             set => debuginfo = value;
@@ -73,6 +87,14 @@
 
         public void ToggleUpdateCamera() {
             updatecamera = !updatecamera;
+        }
+
+        public void ToggleVSync() {
+            vsync = !vsync;
+        }
+
+        public void ToggleFullscreen() {
+            fullscreen = !fullscreen;
         }
         
     }

@@ -1,115 +1,113 @@
 ﻿using System;
-using OpenTK;
-using OpenTK.Graphics;
-using OpenTK.Graphics.OpenGL4;
-using OpenTK.Input;
-using SurviveCore.OpenGL;
-using SurviveCore.OpenGL.Helper;
+using System.Diagnostics;
+using System.Drawing;
+using System.Numerics;
+using SharpDX.Direct3D11;
+using SurviveCore.DirectX;
+using SurviveCore.Gui;
 using SurviveCore.World;
 using SurviveCore.World.Rendering;
-using Quaternion = System.Numerics.Quaternion;
-using Vector2 = System.Numerics.Vector2;
-using Vector3 = System.Numerics.Vector3;
+using WinApi.User32;
+using WinApi.Windows;
+using WinApi.Windows.Controls;
 
 namespace SurviveCore {
 
-    public class SurvivalGame : GameWindow{
+    public class SurvivalGame : Window {
 
-        public SurvivalGame() : base(1280, 720, GraphicsMode.Default, "Test Game", GameWindowFlags.Default , DisplayDevice.Default, 4, 5, GraphicsContextFlags.ForwardCompatible) {}
-
-        private ShaderProgram program;
-        private ShaderProgram hudprogram;
-        private Texture texture;
-        private Texture aoTexture;
+        private DirectXContext dx;
+        private RasterizerState defaultrenderstate;
+        private RasterizerState wireframerenderstate;
+        
         private Camera camera;
-        private Frustum frustum;
+        private WorldRenderer worldrenderer;
         private BlockWorld world;
-
-        protected override void OnLoad(EventArgs e) {
+        private GuiRenderer gui;
+        
+        protected override void OnCreate(ref CreateWindowPacket packet) {
+            base.OnCreate(ref packet);
+            dx = new DirectXContext(Handle, GetClientSize());
             
-            GL.ClearColor(Color4.DarkSlateGray);
-            GL.Enable(EnableCap.DepthTest);
-            GL.Enable(EnableCap.VertexProgramPointSize);
-
-            program = new ShaderProgram()
-                .AttachShader(Shader.FromFile("./Assets/Shader/Fragment.glsl", ShaderType.FragmentShader))
-                .AttachShader(Shader.FromFile("./Assets/Shader/Vertex.glsl", ShaderType.VertexShader))
-                .Link();
-
-            hudprogram = new ShaderProgram()
-                .AttachShader(Shader.FromFile("./Assets/Shader/HudFragment.glsl", ShaderType.FragmentShader))
-                .AttachShader(Shader.FromFile("./Assets/Shader/HudVertex.glsl", ShaderType.VertexShader))
-                .Link();
-
-            texture = Texture.FromFiles(256, Block.Textures);
-            texture.SetFiltering(TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            texture.SetLODBias(-0.7f);
-
-            aoTexture = AmbientOcclusion.GetAOTexture4();//Texture.FromFile("./Assets/Textures/ao.png");
-            aoTexture.SetWarpMode(TextureWrapMode.MirroredRepeat);
-
-            Console.WriteLine(GL.GetError());
-
-            camera = new Camera(75f * (float)Math.PI / 180, (float)Width / (float)Height, 0.1f, 300.0f) {
-                Position = new Vector3(8, 50, 8)
-            };
-            frustum = new Frustum(camera.CameraMatrix);
+            defaultrenderstate = new RasterizerState(dx.Device, new RasterizerStateDescription {
+                CullMode = CullMode.Front,
+                FillMode = FillMode.Solid
+            });
+            wireframerenderstate = new RasterizerState(dx.Device, new RasterizerStateDescription {
+                CullMode = CullMode.None,
+                FillMode = FillMode.Wireframe
+            });
             
-            world = new BlockWorld();
-
-            Resize += (sender, ea) => {
-                GL.Viewport(0, 0, Width, Height);
-                camera.Aspect = (float)Width / (float)Height;
+            worldrenderer = new WorldRenderer(dx.Device);
+            world = new BlockWorld(worldrenderer, out Vector3 playerpos);
+            
+            camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.1f, 300.0f) {
+                Position = playerpos
             };
+            
+            
+
+            gui = new GuiRenderer(dx.Device);
+            
             GC.Collect();
-            base.OnLoad(e);
         }
         
-        private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass };
-        private MouseState oldms;
+        private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt };
         private int slot;
 
         //private float velocity;
 
-        protected override void OnUpdateFrame(FrameEventArgs e) {
-            Vector2 mousepos = Vector2.Zero;
-            if(CursorVisible == false) {
-                MouseState ms = OpenTK.Input.Mouse.GetState();
-                mousepos.X = ms.X - oldms.X;
-                mousepos.Y = ms.Y - oldms.Y;
-                mousepos /= 600;
-                oldms = ms;
+        public void Update(InputManager.InputState input) {
+            if (input.IsForeground) {
+                if(input.IsKeyDown(VirtualKey.ESCAPE))
+                    input.MouseCaptured = !input.MouseCaptured;
+                Vector3 movement = Vector3.Zero;
+                if (input.IsKey(VirtualKey.W))
+                    movement += camera.Forward;
+                if (input.IsKey(VirtualKey.S))
+                    movement += camera.Back;
+                if (input.IsKey(VirtualKey.A))
+                    movement += camera.Left;
+                if (input.IsKey(VirtualKey.D))
+                    movement += camera.Right;
+                movement = movement.LengthSquared() > 0 ? Vector3.Normalize(movement) : Vector3.Zero;
+                movement *= input.IsKey(VirtualKey.SHIFT) ? 0.3f : 0.06f;
+                if(Settings.Instance.Physics) {
+                    camera.Position = ClampToWorld(camera.Position, movement);
+                }else {
+                    camera.Position += movement;
+                }
+                if (input.MouseCaptured) {
+                    var mpos = input.DeltaMousePosition;
+                    camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)(mpos.X) / 600);
+                    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right , (float)(mpos.Y) / 600);
+                    if (input.IsKeyDown(VirtualKey.LBUTTON) || input.IsKeyDown(VirtualKey.Q)) {
+                        Vector3? intersection = FindIntersection(false);
+                        if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
+                        }
+                    }
+                    if (input.IsKeyDown(VirtualKey.RBUTTON) || input.IsKeyDown(VirtualKey.E)) {
+                        Vector3? intersection = FindIntersection(true);
+                        if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
+                            world.SetBlock(intersection.Value, Blocks.Air);
+                        }
+                    }
+                }
             }
-            camera.Rotation *= Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), mousepos.X);
-            camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right, mousepos.Y);
-
-            if(Keyboard[Key.Left])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, -0.1f);
-            if(Keyboard[Key.Right]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, 0.1f);
-            if(Keyboard[Key.Up])    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, 0.1f);
-            if(Keyboard[Key.Down])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, -0.1f);
-            if(Keyboard[Key.PageUp]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Forward, 0.1f);
-            if(Keyboard[Key.PageDown]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Forward, -0.1f);
-
-            Vector3 movement = Vector3.Zero;
-            if(Keyboard[Key.W]) movement += camera.Forward;
-            if(Keyboard[Key.S]) movement += camera.Back;  
-            if(Keyboard[Key.A]) movement += camera.Left;   
-            if(Keyboard[Key.D]) movement += camera.Right;
-            movement *= (Keyboard[Key.ShiftLeft] ? 60 : 10) * (float)e.Time;
-
-            if(Settings.Instance.Physics) {
-                camera.Position = ClampToWorld(camera.Position, movement);
-            }else {
-                camera.Position += movement;
-            }
+               
+            slot = Math.Abs(input.MouseWheel / 120) % inventory.Length;
             
-            slot = Math.Abs(Mouse.Wheel / 2 % inventory.Length);
+            //if(Keyboard[Key.Left])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, -0.1f);
+            //if(Keyboard[Key.Right]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, 0.1f);
+            //if(Keyboard[Key.Up])    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, 0.1f);
+            //if(Keyboard[Key.Down])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, -0.1f);
+            //if(Keyboard[Key.PageUp]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Forward, 0.1f);
+            //if(Keyboard[Key.PageDown]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Forward, -0.1f);
+//
+            //slot = Math.Abs(Mouse.Wheel / 2 % inventory.Length);
+//
+            //Title = "Block: " + inventory[slot].Name;
 
-            Title = "Block: " + inventory[slot].Name;
-            
-            
-
-            base.OnUpdateFrame(e);
+            input.Update();
         }
 
         private bool IsAir(Vector3 pos) {
@@ -170,106 +168,78 @@ namespace SurviveCore {
             return null;
         }
 
-        protected override void OnRenderFrame(FrameEventArgs e) {
-            camera.Update();
-            if(Settings.Instance.UpdateCamera)
-                frustum.Update(camera.CameraMatrix);
-            if(Settings.Instance.UpdateCamera)
-                world.Update((int)Math.Floor(camera.Position.X) >> Chunk.BPC, (int)Math.Floor(camera.Position.Z) >> Chunk.BPC);
 
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
-            if(Settings.Instance.Wireframe) {
-                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-                GL.Disable(EnableCap.CullFace);
-            }else{
-                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-                GL.Enable(EnableCap.CullFace);
+        private readonly Stopwatch fpstimer = Stopwatch.StartNew();
+        private long fps;
+        private int cfps = 1;
+        public void Draw(InputManager.InputState input) {
+            if (fpstimer.ElapsedMilliseconds >= 130) {
+                fps = (Stopwatch.Frequency / (fpstimer.ElapsedTicks / cfps));
+                cfps = 0;
+                fpstimer.Restart();
             }
+            cfps++;
+            
+            camera.Update(Settings.Instance.UpdateCamera);
+            if(Settings.Instance.UpdateCamera)
+                world.Update(camera.Position);
 
+            dx.Clear(Color.DarkSlateGray);
+            dx.Context.Rasterizer.State = Settings.Instance.Wireframe ? wireframerenderstate : defaultrenderstate;
+            worldrenderer.Draw(dx.Context, camera);
+            dx.Context.Rasterizer.State = defaultrenderstate;
 
-            texture.Bind(TextureUnit.Texture0);
-            aoTexture.Bind(TextureUnit.Texture1);
-            program.Bind();
-            program.SetUniform("mvp", false, ref camera.CameraMatrix);
-            program.SetUniform("fog_color", Color4.DarkSlateGray);
-            program.SetUniform("enable_fog", Settings.Instance.Fog ? 1 : 0);
-            program.SetUniform("pos", camera.Position);
-            program.SetUniform("ao", Settings.Instance.AmbientOcclusion ? 1 : 0);
-            world.Draw(frustum);
-
-            hudprogram.Bind();
-            GL.DrawArrays(PrimitiveType.Points, 0, 1);
-
-            base.OnRenderFrame(e);
-            SwapBuffers();
-        }
-
-        protected override void OnKeyDown(KeyboardKeyEventArgs e) {
-            base.OnKeyDown(e);
-            if(e.IsRepeat)
-                return;
-            switch (e.Key) {
-                case Key.F1:
-                    Settings.Instance.ToggleUpdateCamera();
-                    break;
-                case Key.F2:
+            gui.Begin(input);
+            if(input.MouseCaptured) {
+                gui.Text(new Point(5,5), "Block: " + TextFormat.LightPink + inventory[slot].Name, size:30);
+                gui.Text(new Point(GetClientSize().Width/2, GetClientSize().Height/2), "+", size:25, origin:Origin.Center);
+                if (Settings.Instance.DebugInfo)
+                    gui.Text(new Point(GetClientSize().Width-200, 5), 
+                        "FPS: " + fps + "\n" + 
+                        "Pos: " + String.Format("[{0}|{1}|{2}]", (int)MathF.Round(camera.Position.X),(int)MathF.Round(camera.Position.Y),(int)MathF.Round(camera.Position.Z)) + "\n" +  
+                        world.DebugText);
+            } else {
+                int w = GetClientSize().Width  / 2 - 150;
+                int h = GetClientSize().Height / 2 - 200;
+                if(gui.Button(new Rectangle(w - 180, h +   0, 300, 90), "Wireframe " + (!Settings.Instance.Wireframe ? "on" : "off")))
                     Settings.Instance.ToggleWireframe();
-                    break;
-                case Key.F3:
+                if(gui.Button(new Rectangle(w - 180, h + 100, 300, 90), "Ambient Occlusion " + (!Settings.Instance.AmbientOcclusion ? "on" : "off")))
                     Settings.Instance.ToggleAmbientOcclusion();
-                    break;
-                case Key.F4:
+                if(gui.Button(new Rectangle(w - 180, h + 200, 300, 90), "Fog " + (!Settings.Instance.Fog ? "on" : "off")))
                     Settings.Instance.ToggleFog();
-                    break;
-                case Key.F5:
+                if(gui.Button(new Rectangle(w - 180, h + 300, 300, 90), "Physics " + (!Settings.Instance.Physics ? "on" : "off")))
                     Settings.Instance.TogglePhysics();
-                    break;
-                case Key.F6:
+                
+                if(gui.Button(new Rectangle(w + 180, h +  0, 300, 90), "Debug info " + (!Settings.Instance.DebugInfo ? "on" : "off")))
                     Settings.Instance.ToggleDebugInfo();
-                    break;
-                case Key.F11:
-                    WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
-                    Console.WriteLine(WindowState);
-                    break;
-                case Key.F12:
-                    VSync = VSync == VSyncMode.Adaptive ? VSyncMode.Off : VSyncMode.Adaptive;
-                    Console.WriteLine(VSync);
-                    break;
-                case Key.Escape:
-                    CursorVisible = true;
-                    break;
-                case Key.Space:
-                    Console.WriteLine(ChunkLocation.FromPos(camera.Position));
-                    break;    
+                if(gui.Button(new Rectangle(w + 180, h + 100, 300, 90), "Camera updates " + (!Settings.Instance.UpdateCamera ? "on" : "off")))
+                    Settings.Instance.ToggleUpdateCamera();
+                if(gui.Button(new Rectangle(w + 180, h + 200, 300, 90), "VSync " + (!Settings.Instance.VSync ? "on" : "off")))
+                    Settings.Instance.ToggleVSync();
+                if(gui.Button(new Rectangle(w + 180, h + 300, 300, 90), "Fullscreen " + (!Settings.Instance.Fullscreen ? "on" : "off")))
+                    Settings.Instance.ToggleFullscreen();
             }
+            
+            gui.Render(dx.Context, GetClientSize());
+            dx.SwapChain.Present(Settings.Instance.VSync ? 1 : 0, 0);
+            if(Settings.Instance.Fullscreen != dx.SwapChain.IsFullScreen)
+                dx.SwapChain.IsFullScreen = Settings.Instance.Fullscreen;
         }
 
-        protected override void OnMouseDown(MouseButtonEventArgs e) {
-            base.OnMouseDown(e);
-            if (e.Button == MouseButton.Left && !CursorVisible) {
-                Vector3? intersection = FindIntersection(false);
-                if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
-                }
-            }
-            if (e.Button == MouseButton.Right && !CursorVisible) {
-                Vector3? intersection = FindIntersection(true);
-                if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
-                    world.SetBlock(intersection.Value, Blocks.Air);
-                }
-            }
-            if (e.Button == MouseButton.Left &&  CursorVisible) {
-                CursorVisible = false;
-            }
+        protected override void OnSize(ref SizePacket packet) {
+            base.OnSize(ref packet);
+            dx.Resize(packet.Size);
+            camera.Aspect = (float)packet.Size.Width / packet.Size.Height;
         }
 
-        protected override void OnUnload(EventArgs e) {
-            base.OnUnload(e);
-            program.Dispose();
-            hudprogram.Dispose();
+        protected override void Dispose(bool d) {
+            base.Dispose(d);
+            dx.Dispose();
+            defaultrenderstate.Dispose();
+            wireframerenderstate.Dispose();
             world.Dispose();
-            aoTexture.Dispose();
-            texture.Dispose();
+            worldrenderer.Dispose();
+            gui.Dispose();
         }
 
     }

@@ -39,7 +39,7 @@ namespace SurviveCore.World {
                     }
                 }
             }
-
+            (chunk as WorldChunk)?.SetGenerated();
         }
         
     }
