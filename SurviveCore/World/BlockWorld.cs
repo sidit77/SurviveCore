@@ -61,6 +61,7 @@ namespace SurviveCore.World {
 	        
 	        UpdateChunkQueues();
 	        
+	        
         }
 
         public void Draw(Frustum frustum) {
