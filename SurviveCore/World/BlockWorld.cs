@@ -58,6 +58,7 @@ namespace SurviveCore.World {
 		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("playerX",  0));
 		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("playerY", 50));
 		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("playerZ",  0));
+		       
 	        }
 
 	        this.renderer = renderer;
