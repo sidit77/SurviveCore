@@ -7,6 +7,7 @@ using SurviveCore.DirectX;
 using SurviveCore.Gui;
 using SurviveCore.World;
 using SurviveCore.World.Rendering;
+using SurviveCore.World.Saving;
 using WinApi.User32;
 using WinApi.Windows;
 using WinApi.Windows.Controls;
@@ -22,6 +23,7 @@ namespace SurviveCore {
         private Camera camera;
         private WorldRenderer worldrenderer;
         private BlockWorld world;
+        private WorldSave savegame;
         private GuiRenderer gui;
         
         protected override void OnCreate(ref CreateWindowPacket packet) {
@@ -38,10 +40,13 @@ namespace SurviveCore {
             });
             
             worldrenderer = new WorldRenderer(dx.Device);
-            world = new BlockWorld(worldrenderer, out Vector3 playerpos);
-            
+            savegame = new WorldSave("./Assets/World.db");
+            world = new BlockWorld(worldrenderer, savegame);
+
+            savegame.GetPlayerData("default", out Vector3 pos, out Quaternion rot);
             camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.1f, 300.0f) {
-                Position = playerpos
+                Position = pos,
+                Rotation = rot
             };
             
             
@@ -240,6 +245,8 @@ namespace SurviveCore {
             world.Dispose();
             worldrenderer.Dispose();
             gui.Dispose();
+            savegame.SavePlayerData("default", camera.Position, camera.Rotation);
+            savegame.Dispose();
         }
 
     }

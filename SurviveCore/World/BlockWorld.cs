@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using LiteDB;
 using Priority_Queue;
 using SurviveCore.World.Rendering;
+using SurviveCore.World.Saving;
 using SurviveCore.World.Utils;
 
 namespace SurviveCore.World {
@@ -23,14 +25,12 @@ namespace SurviveCore.World {
         public const int LoadDistance = 16;
 	    public const int UnloadDistance = LoadDistance + 1;
 
-
-	    private Vector3 playerpos;
         private int centerX;
 	    private int centerZ;
 
-	    private readonly IWorldGenerator generator;
 	    private readonly ChunkMesher mesher;
 	    private readonly WorldRenderer renderer;
+	    private readonly WorldSave save;
 
         private readonly SimplePriorityQueue<ChunkLocation, int> meshUpdateQueue;
         private readonly Dictionary<ChunkLocation, Chunk> chunkMap;
@@ -38,55 +38,26 @@ namespace SurviveCore.World {
         private readonly Stack<Chunk> chunkUnloadStack;
 	    private readonly HashSet<ChunkLocation> currentlyLoading;
 	    private readonly ConcurrentQueue<WorldChunk> loadedChunks;
-	    private readonly Stack<ChunkData> savedata;
-
-	    private readonly LiteDatabase blockDatabase;
-	    private readonly LiteCollection<ChunkData> savedchunks;
 
 	    private readonly Stopwatch updateTimer;
 	    private int averageChunkUpdates;
 
-	    private readonly AverageTimer savingtimer;
-	    private readonly AverageTimer loadingtimer;
-	    private readonly AverageTimer compresstimer;
-	    
-        public BlockWorld(WorldRenderer renderer, out Vector3 pos) {
-	        blockDatabase = new LiteDatabase("./Assets/World.db");
-	        savedchunks = blockDatabase.GetCollection<ChunkData>("chunks");
-	        if(!blockDatabase.CollectionExists("settings")) {
-		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("seed", new Random().Next()));
-		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("playerX",  0));
-		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("playerY", 50));
-		        blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("playerZ",  0));
-		       
-	        }
-
+        public BlockWorld(WorldRenderer renderer, WorldSave save) {
+	        
 	        this.renderer = renderer;
+	        this.save = save;
+	        
             meshUpdateQueue = new SimplePriorityQueue<ChunkLocation, int>();
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
             chunkLoadQueue = new SimplePriorityQueue<ChunkLocation, int>();
             chunkUnloadStack = new Stack<Chunk>();
 	        currentlyLoading = new HashSet<ChunkLocation>();
 	        loadedChunks = new ConcurrentQueue<WorldChunk>();
-	        savedata = new Stack<ChunkData>();
-            
-            mesher = new ChunkMesher();
-            generator = new DefaultWorldGenerator(blockDatabase.GetCollection<Setting>("settings").FindById("seed").Value);//(int)Stopwatch.GetTimestamp()
 	        
+            mesher = new ChunkMesher();
 	        updateTimer = new Stopwatch();
 	        
-	        savingtimer = new AverageTimer();
-	        loadingtimer = new AverageTimer();
-	        compresstimer = new AverageTimer();
-
-	        pos = new Vector3 {
-		        X = blockDatabase.GetCollection<Setting>("settings").FindById("playerX").Value,
-		        Y = blockDatabase.GetCollection<Setting>("settings").FindById("playerY").Value,
-		        Z = blockDatabase.GetCollection<Setting>("settings").FindById("playerZ").Value
-	        };
-
 	        UpdateChunkQueues();
-	        
 	        
         }
 
@@ -103,15 +74,14 @@ namespace SurviveCore.World {
 			    sb.AppendFormat("ChunkRenderer: {0}", renderer.NumberOfRenderers)        .Append("\n");
 			    sb.AppendFormat("Rendered Chunks: {0}", renderer.CurrentlyRenderedChunks).Append("\n");
 			    sb.AppendFormat("AverMeshingTime: {0}", mesher.AverageChunkMeshingTime)  .Append("\n");
-			    sb.AppendFormat("AveraSavingTime: {0}", savingtimer.AverageTicks)        .Append("\n");
-			    sb.AppendFormat("AveCompressTime: {0}", compresstimer.AverageTicks)        .Append("\n");
-			    sb.AppendFormat("AverLoadingTime: {0}", loadingtimer.AverageTicks);
+			    sb.AppendFormat("AveraSavingTime: {0}", save.AverageSavingTime)          .Append("\n");
+			    sb.AppendFormat("AveCompressTime: {0}", save.AverageCompressingTime)     .Append("\n");
+			    sb.AppendFormat("AverLoadingTime: {0}", save.AverageLoadingTime);
 			    return sb.ToString();
 		    }
 	    }
 	    
         public void Update(Vector3 pos) {
-	        playerpos = pos;
 	        int cx = (int)Math.Floor(pos.X) >> Chunk.BPC;
 	        int cz = (int)Math.Floor(pos.Z) >> Chunk.BPC;
             updateTimer.Restart();
@@ -185,17 +155,8 @@ namespace SurviveCore.World {
 		        currentlyLoading.Add(l);
 		        
 				WorldChunk chunk = WorldChunk.CreateWorldChunk(l, this);
-		        
-			    
 			    Task.Run(() => {
-				    loadingtimer.Start();
-				    ChunkData data = savedchunks.FindById(BsonMapper.Global.ToDocument(l));
-				    loadingtimer.Stop();
-				    if(data == null) {
-				        generator.FillChunk(chunk);
-				    }else {
-				    	ChunkSerializer.Deserialize(chunk, data);
-				    }
+				    save.FillChunk(chunk);
 				    loadedChunks.Enqueue(chunk);
 			    });
 		        
@@ -220,21 +181,10 @@ namespace SurviveCore.World {
 		            continue;
                 chunkMap.Remove(chunk.Location);
                 chunk.CleanUp();
-	            if(chunk.IsDirty || chunk.IsGenerated) {
-		            compresstimer.Start();
-		            ChunkData d = ChunkSerializer.Serialize(chunk);
-		            compresstimer.Stop();
-		            savedata.Push(d);
-	            }
+	            save.QueueChunkForSaving(chunk);
             }
-	        
-	        if(savedata.Count > 0) {
-		        savingtimer.Start();
-		        savedchunks.Upsert(savedata);
-		        savingtimer.Stop(savedata.Count);
-		        savedata.Clear();
-	        }
-        }
+	    	save.Save();    
+	    }
         
         private void MeshChunks() {
 	        int i = 0;
@@ -269,133 +219,8 @@ namespace SurviveCore.World {
 	        foreach(Chunk c in chunkMap.Values)
 		        chunkUnloadStack.Push(c);
 	        UnloadChunks(true);
-	        blockDatabase.GetCollection<Setting>("settings").Update(new Setting("playerX", (int)MathF.Round(playerpos.X)));
-	        blockDatabase.GetCollection<Setting>("settings").Update(new Setting("playerY", (int)MathF.Round(playerpos.Y)));
-	        blockDatabase.GetCollection<Setting>("settings").Update(new Setting("playerZ", (int)MathF.Round(playerpos.Z)));
-            blockDatabase.Dispose();
         }
 	    
-	    [SuppressMessage("ReSharper", "MemberCanBePrivate.Local")]
-	    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
-	    [SuppressMessage("ReSharper", "UnusedMember.Local")]
-	    private class ChunkData {
-		    public ChunkLocation Id { get; set; }
-		    public byte[] Meta { get; set; }
-		    public byte[] Blocks { get; set; }
-
-		    public ChunkData() {
-			    
-		    }
-		    
-		    public ChunkData(ChunkLocation id, byte[] meta, byte[] blocks) {
-			    Id = id;
-			    Meta = meta;
-			    Blocks = blocks;
-		    }
-	    }
-
-	    private static class ChunkSerializer {
-
-		    public static unsafe ChunkData Serialize(Chunk c) {
-			    byte* start = stackalloc byte[Chunk.Size * Chunk.Size * Chunk.Size];
-				int size = 2;
-				byte* pointer = start + 0;
-				byte* counter = start + 1;
-				(*pointer) = c.GetMetaDataDirect(0, 0, 0);
-				(*counter) = 0;
-				for(int x = 0; x < Chunk.Size; x++) {
-				    for(int y = 0; y < Chunk.Size; y++) {
-					    for(int z = 0; z < Chunk.Size; z++) {
-						    byte b = c.GetMetaDataDirect(x, y, z);
-						    if(b == *pointer && *counter < 255) {
-							    (*counter)++;
-						    }else {
-							    counter += 2;
-							    pointer += 2;
-							    size += 2;
-							    (*counter) = 1;
-							    (*pointer) = b;
-						    }
-					    }
-				    }
-				}
-				byte[] meta = new byte[size];
-				Marshal.Copy((IntPtr)start,meta,0,size);
-				
-				size = 2;
-				pointer = start + 0;
-				counter = start + 1;
-				(*pointer) = (byte)c.GetBlockDirect(0, 0, 0).ID;
-				(*counter) = 0;
-				for(int x = 0; x < Chunk.Size; x++) {
-				    for(int y = 0; y < Chunk.Size; y++) {
-					    for(int z = 0; z < Chunk.Size; z++) {
-						    byte b = (byte)c.GetBlockDirect(x, y, z).ID;
-						    if(b == *pointer && *counter < 255) {
-							    (*counter)++;
-						    }else {
-							    counter += 2;
-							    pointer += 2;
-							    size += 2;
-							    (*counter) = 1;
-							    (*pointer) = b;
-						    }
-					    }
-				    }
-				}
-				byte[] blocks = new byte[size];
-				Marshal.Copy((IntPtr)start,blocks,0,size);
-			    
-			    
-			    return new ChunkData(c.Location, meta, blocks);
-		    }
-
-		    public static unsafe void Deserialize(Chunk c, ChunkData cd) {
-			    fixed(byte* bstart = cd.Blocks)
-			    fixed(byte* mstart = cd.Meta) {
-				    byte* bpointer = bstart + 0;
-				    byte* bcounter = bstart + 1;
-				    byte* mpointer = mstart + 0;
-				    byte* mcounter = mstart + 1;
-
-				    for(int x = 0; x < Chunk.Size; x++) {
-					    for(int y = 0; y < Chunk.Size; y++) {
-						    for(int z = 0; z < Chunk.Size; z++) {
-							    if(*bcounter == 0) {
-								    bpointer += 2;
-								    bcounter += 2;
-							    }
-							    if(*mcounter == 0) {
-								    mpointer += 2;
-								    mcounter += 2;
-							    }
-							    c.SetBlockDirect(x, y, z, Block.GetBlock(*bpointer), *mpointer, UpdateSource.Loading);
-							    (*bcounter)--;
-							    (*mcounter)--;
-						    }
-					    }
-				    }
-			    }
-		    }
-		    
-	    }
-
-	    [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-	    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
-	    [SuppressMessage("ReSharper", "UnusedMember.Global")]
-	    public class Setting {
-		    [BsonId]
-		    public string Name { get; set; }
-		    public int Value { get; set; }
-
-		    public Setting() {
-		    }
-
-		    public Setting(string name, int value) {
-			    Name = name;
-			    Value = value;
-		    }
-	    }
 	    
     }
 
