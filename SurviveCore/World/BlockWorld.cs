@@ -8,9 +8,12 @@ using System.Net.Http.Headers;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using ConcurrentCollections;
 using LiteDB;
 using Priority_Queue;
+using SharpDX.Direct3D11;
 using SurviveCore.World.Rendering;
 using SurviveCore.World.Saving;
 using SurviveCore.World.Utils;
@@ -19,11 +22,12 @@ namespace SurviveCore.World {
 
     public class BlockWorld : IDisposable {
 
-	    public const int MaxLoadTasks = 30;
-	    public const int MaxUpdateTime = 5;
-        public const int Height = 8;
-        public const int LoadDistance = 16;
-	    public const int UnloadDistance = LoadDistance + 1;
+	    private const ThreadPriority LoadingThreadPriority = ThreadPriority.BelowNormal;
+	    private const int MaxLoadingThreads = 1;
+	    private const int MaxUpdateTime = 5;
+        private const int Height = 4;
+        private const int LoadDistance = 9;
+	    private const int UnloadDistance = LoadDistance + 1;
 
         private int centerX;
 	    private int centerZ;
@@ -36,14 +40,17 @@ namespace SurviveCore.World {
         private readonly Dictionary<ChunkLocation, Chunk> chunkMap;
         private readonly SimplePriorityQueue<ChunkLocation, int> chunkLoadQueue;
         private readonly Stack<Chunk> chunkUnloadStack;
-	    private readonly HashSet<ChunkLocation> currentlyLoading;
+	    private readonly ConcurrentHashSet<ChunkLocation> currentlyLoading;
 	    private readonly ConcurrentQueue<WorldChunk> loadedChunks;
 
 	    private readonly Stopwatch updateTimer;
 	    private int averageChunkUpdates;
 
+	    private readonly Thread[] loadingthreads;
+	    private readonly object loadingthreadlock = new object();
+	    private bool disposing = false;
+	    
         public BlockWorld(WorldRenderer renderer, WorldSave save) {
-	        
 	        this.renderer = renderer;
 	        this.save = save;
 	        
@@ -51,14 +58,41 @@ namespace SurviveCore.World {
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
             chunkLoadQueue = new SimplePriorityQueue<ChunkLocation, int>();
             chunkUnloadStack = new Stack<Chunk>();
-	        currentlyLoading = new HashSet<ChunkLocation>();
+	        currentlyLoading = new ConcurrentHashSet<ChunkLocation>();
 	        loadedChunks = new ConcurrentQueue<WorldChunk>();
 	        
             mesher = new ChunkMesher();
 	        updateTimer = new Stopwatch();
 	        
+	        loadingthreads = new Thread[MaxLoadingThreads];
+	        for (int i = 0; i < MaxLoadingThreads; i++) {
+		        loadingthreads[i] = new Thread(() => {
+			        ChunkLocation l = new ChunkLocation(0, 0, 0);
+			        while (true) {
+				        lock (loadingthreadlock) {
+					        while (!disposing && !chunkLoadQueue.TryDequeue(out l))
+						        Monitor.Wait(loadingthreadlock);
+				        }
+
+				        if (disposing)
+					        break;
+
+				        if (GetDistanceSquared(l) > UnloadDistance * UnloadDistance)
+					        continue;
+
+				        currentlyLoading.Add(l);
+				        WorldChunk chunk = WorldChunk.CreateWorldChunk(l, this);
+				        save.FillChunk(chunk);
+				        loadedChunks.Enqueue(chunk);
+			        }
+		        }) {
+			        Name = "LoadingThread " + (i + 1),
+			        Priority = LoadingThreadPriority
+		        };
+		        loadingthreads[i].Start();
+	        }
+
 	        UpdateChunkQueues();
-	        
         }
 
 	    public WorldRenderer Renderer => renderer;
@@ -76,7 +110,8 @@ namespace SurviveCore.World {
 			    sb.AppendFormat("AverMeshingTime: {0}", mesher.AverageChunkMeshingTime)  .Append("\n");
 			    sb.AppendFormat("AveraSavingTime: {0}", save.AverageSavingTime)          .Append("\n");
 			    sb.AppendFormat("AveCompressTime: {0}", save.AverageCompressingTime)     .Append("\n");
-			    sb.AppendFormat("AverLoadingTime: {0}", save.AverageLoadingTime);
+			    sb.AppendFormat("AverLoadingTime: {0}", save.AverageLoadingTime)         .Append("\n");
+			    sb.AppendFormat("AveGenerateTime: {0}", save.AverageGeneratingTime);
 			    return sb.ToString();
 		    }
 	    }
@@ -133,11 +168,15 @@ namespace SurviveCore.World {
 						    if (chunkLoadQueue.Contains(l)) {
 							    chunkLoadQueue.TryUpdatePriority(l, GetDistanceSquared(l, true));
 						    }else {
-							 	chunkLoadQueue.Enqueue(l, GetDistanceSquared(l, true));   
+							 	chunkLoadQueue.Enqueue(l, GetDistanceSquared(l, true));
 						    }
 					    }
 				    }
 			    }
+		    }
+
+		    lock (loadingthreadlock) {
+			    Monitor.PulseAll(loadingthreadlock);
 		    }
 
 		    foreach (Chunk chunk in chunkMap.Values.Where(c => GetDistanceSquared(c.Location) > UnloadDistance * UnloadDistance)) {
@@ -146,42 +185,25 @@ namespace SurviveCore.World {
 	    }
 
         private void LoadChunks() {
-	        while (currentlyLoading.Count <= MaxLoadTasks && chunkLoadQueue.Count > 0) {
-		        ChunkLocation l = chunkLoadQueue.Dequeue();
-		        
-		        if(GetDistanceSquared(l) > UnloadDistance * UnloadDistance) 
-			        continue;
-
-		        currentlyLoading.Add(l);
-		        
-				WorldChunk chunk = WorldChunk.CreateWorldChunk(l, this);
-			    Task.Run(() => {
-				    save.FillChunk(chunk);
-				    loadedChunks.Enqueue(chunk);
-			    });
-		        
-	        }
-	        
 	        while(!loadedChunks.IsEmpty) {
 		        loadedChunks.TryDequeue(out WorldChunk chunk);
 		        for (int d = 0; d < 6; d++)
 			        chunk.SetNeighbor(d, GetChunk(chunk.Location.GetAdjecent(d)));
 		        chunk.SetMeshUpdates(true);
 		        chunkMap.Add(chunk.Location, chunk);
-		        currentlyLoading.Remove(chunk.Location);
+		        currentlyLoading.TryRemove(chunk.Location);
 	        }
 	        
         }
 
-	    
         private void UnloadChunks(bool final) {
             while (chunkUnloadStack.Count > 0) {
                 Chunk chunk = chunkUnloadStack.Pop();
 	            if(!final && GetDistanceSquared(chunk.Location) < LoadDistance * LoadDistance)
 		            continue;
                 chunkMap.Remove(chunk.Location);
-                chunk.CleanUp();
 	            save.QueueChunkForSaving(chunk);
+	            chunk.CleanUp();
             }
 	    	save.Save();    
 	    }
@@ -196,8 +218,10 @@ namespace SurviveCore.World {
 					break;
             }
 
-	        averageChunkUpdates += i;
-	        averageChunkUpdates /= 2;
+	        if (i != 0 && meshUpdateQueue.Count != 0) {
+		        averageChunkUpdates += i;
+		        averageChunkUpdates /= 2;
+	        }
         }
 
 	    private Chunk GetChunk(ChunkLocation l) {
@@ -216,6 +240,13 @@ namespace SurviveCore.World {
 	    }
 	    
         public void Dispose() {
+	        disposing = true;
+	        lock (loadingthreadlock) {
+		        Monitor.PulseAll(loadingthreadlock);
+	        }
+	        foreach(Thread t in loadingthreads) {
+		        t.Join();
+	        }
 	        foreach(Chunk c in chunkMap.Values)
 		        chunkUnloadStack.Push(c);
 	        UnloadChunks(true);

@@ -7,7 +7,7 @@ namespace SurviveCore.World {
 
     public abstract class Chunk {
 
-        public const int BPC = 4;
+        public const int BPC = 5;
         public const int Size = 1 << BPC;
 
         protected ChunkLocation location;
@@ -68,7 +68,7 @@ namespace SurviveCore.World {
 
     public class WorldChunk : Chunk {
 
-        private static readonly ObjectPool<WorldChunk> pool = new ObjectPool<WorldChunk>(256, () => new WorldChunk());
+        private static readonly ConcurrentObjectPool<WorldChunk> pool = new ConcurrentObjectPool<WorldChunk>(256, () => new WorldChunk());
 
         public static WorldChunk CreateWorldChunk(ChunkLocation l, BlockWorld w) {
             WorldChunk c = pool.Get();
@@ -143,8 +143,8 @@ namespace SurviveCore.World {
                 world.Renderer.DisposeChunkRenderer(renderer);
                 renderer = null;
             }
-            pool.Add(this);
             world = null;
+            pool.Add(this);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

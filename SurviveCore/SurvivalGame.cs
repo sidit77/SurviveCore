@@ -44,7 +44,7 @@ namespace SurviveCore {
             world = new BlockWorld(worldrenderer, savegame);
 
             savegame.GetPlayerData("default", out Vector3 pos, out Quaternion rot);
-            camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.1f, 300.0f) {
+            camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.1f, 320.0f) {
                 Position = pos,
                 Rotation = rot
             };
