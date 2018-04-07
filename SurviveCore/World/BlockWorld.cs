@@ -32,7 +32,7 @@ namespace SurviveCore.World {
 	    private readonly ChunkMesher mesher;
 	    private readonly WorldRenderer renderer;
 
-        private readonly Queue<ChunkLocation> meshUpdateQueue;
+        private readonly SimplePriorityQueue<ChunkLocation, int> meshUpdateQueue;
         private readonly Dictionary<ChunkLocation, Chunk> chunkMap;
         private readonly SimplePriorityQueue<ChunkLocation, int> chunkLoadQueue;
         private readonly Stack<Chunk> chunkUnloadStack;
@@ -62,7 +62,7 @@ namespace SurviveCore.World {
 	        }
 
 	        this.renderer = renderer;
-            meshUpdateQueue = new Queue<ChunkLocation>();
+            meshUpdateQueue = new SimplePriorityQueue<ChunkLocation, int>();
             chunkMap = new Dictionary<ChunkLocation, Chunk>();
             chunkLoadQueue = new SimplePriorityQueue<ChunkLocation, int>();
             chunkUnloadStack = new Stack<Chunk>();
@@ -254,9 +254,9 @@ namespace SurviveCore.World {
 		    return chunkMap.TryGetValue(l, out Chunk c) ? c : BorderChunk.Instance;
 	    }
 	    
-        public void QueueChunkForRemesh(Chunk c) {
-	        if(!meshUpdateQueue.Contains(c.Location))
-		        meshUpdateQueue.Enqueue(c.Location);
+        public void QueueChunkForRemesh(Chunk c, int priority) {
+	        if(!meshUpdateQueue.EnqueueWithoutDuplicates(c.Location, priority) && meshUpdateQueue.GetPriority(c.Location) > priority)
+		        meshUpdateQueue.UpdatePriority(c.Location, priority);
         }
 
 	    private int GetDistanceSquared(ChunkLocation l, bool y = false) {
@@ -369,7 +369,7 @@ namespace SurviveCore.World {
 								    mpointer += 2;
 								    mcounter += 2;
 							    }
-							    c.SetBlockDirect(x, y, z, Block.GetBlock(*bpointer), *mpointer);
+							    c.SetBlockDirect(x, y, z, Block.GetBlock(*bpointer), *mpointer, UpdateSource.Loading);
 							    (*bcounter)--;
 							    (*mcounter)--;
 						    }

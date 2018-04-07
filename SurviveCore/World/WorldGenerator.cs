@@ -35,11 +35,10 @@ namespace SurviveCore.World {
             for(int bx = 0; bx < Chunk.Size; bx++) {
                 for(int by = 0; by < Chunk.Size; by++) {
                     for(int bz = 0; bz < Chunk.Size; bz++) {
-                        chunk.SetBlockDirect(bx, by, bz, noisecache[bx, by + 1, bz] > 0 ? Blocks.Stone : noisecache[bx, by, bz] > 0 ? Blocks.Grass : Blocks.Air);
+                        chunk.SetBlockDirect(bx, by, bz, noisecache[bx, by + 1, bz] > 0 ? Blocks.Stone : noisecache[bx, by, bz] > 0 ? Blocks.Grass : Blocks.Air, UpdateSource.Generation);
                     }
                 }
             }
-            (chunk as WorldChunk)?.SetGenerated();
         }
         
     }

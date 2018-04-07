@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using SurviveCore.World.Utils;
 
 namespace SurviveCore.World.Rendering {
@@ -9,41 +10,38 @@ namespace SurviveCore.World.Rendering {
     public class ChunkMesher {
         
         private readonly List<Vertex> vertices;
-
-        private readonly  BlockFace[] mask;
-        private readonly  int[] p = new int[3];
-        private readonly  int[] q = new int[3];
-        private readonly  int[] s = new int[3];
-        private int u, v, d, axis;
-        private int n, k, l;
-        private bool done;
-
         private readonly AverageTimer timer;
 
         public ChunkMesher() {
             vertices = new List<Vertex>();
-            mask = new BlockFace[Chunk.Size * Chunk.Size];
             timer = new AverageTimer();
         }
 
         public long AverageChunkMeshingTime => timer.AverageTicks;
         
-        public Vertex[] GenerateMesh(Chunk chunk, ImmutableDictionary<string, int> blockmapping) {
+        public unsafe Vertex[] GenerateMesh(Chunk chunk, ImmutableDictionary<string, int> blockmapping) {
             if(chunk.isEmpty())
                 return null;
             
             timer.Start();
             
+            BlockFace* mask = stackalloc BlockFace[Chunk.Size * Chunk.Size];
+            int* p = stackalloc int[3];
+            int* q = stackalloc int[3];
+            int* s = stackalloc int[3];
             int x = chunk.Location.WX;
             int y = chunk.Location.WY;
             int z = chunk.Location.WZ;
             
+            //TODO Replace the VertexList with something threadsafe and possibly faster?
             vertices.Clear();
 
-            for (axis = 0; axis < 6; axis++) {
-                d = axis % 3;
-                u = (d + 1) % 3;
-                v = (d + 2) % 3;
+            //Thread.Sleep(3);
+            
+            for (int axis = 0; axis < 6; axis++) {
+                int d = axis % 3;
+                int u = (d + 1) % 3;
+                int v = (d + 2) % 3;
 
                 q[u] = 0;
                 q[v] = 0;
@@ -53,11 +51,13 @@ namespace SurviveCore.World.Rendering {
                 int f2 = !chunk.IsFull() ? Chunk.Size : (axis >= 3 ? 1 : Chunk.Size);
                 
                 for(p[d] = f1; p[d] < f2; p[d]++) {
-                    n = 0;
-                    
+                    int n = 0;
+
+                    int l;
+                    bool visible = false;
                     for(p[v] = 0; p[v] < Chunk.Size; ++p[v]) {
                         for(p[u] = 0; p[u] < Chunk.Size; ++p[u]) {
-                            mask[n++].Visible = !chunk.GetBlockDirect(p[0], p[1], p[2]).IsUnrendered() && !(chunk.GetBlock(p[0] + q[0], p[1] + q[1], p[2] + q[2]).IsSolid());
+                            visible |= mask[n++].Visible = !chunk.GetBlockDirect(p[0], p[1], p[2]).IsUnrendered() && !(chunk.GetBlock(p[0] + q[0], p[1] + q[1], p[2] + q[2]).IsSolid());
                             if(mask[n - 1].Visible) {
                                 mask[n - 1].TextureID = blockmapping[chunk.GetBlockDirect(p[0], p[1], p[2]).GetTexture(axis)];
                                 mask[n - 1].AoID = 0;
@@ -71,18 +71,22 @@ namespace SurviveCore.World.Rendering {
                         }
                     }
                     
+                    if(!visible)
+                        continue;
+                    
                     n = 0;
                     for(p[v] = 0; p[v] < Chunk.Size; ++p[v]) {
                         for(p[u] = 0; p[u] < Chunk.Size;) {
                             if(mask[n].Visible) {
                                 s[d] = 1;
 
-                                for(s[u] = 1; p[u] + s[u] < Chunk.Size && mask[n + s[u]].Visible && mask[n + s[u]].CanConnect(mask[n]); ++s[u]) ;
+                                for(s[u] = 1; p[u] + s[u] < Chunk.Size && mask[n + s[u]].Visible && mask[n + s[u]].CanConnect(ref mask[n]); ++s[u]) ;
 
-                                done = false;
+                                bool done = false;
+                                int k;
                                 for(s[v] = 1; p[v] + s[v] < Chunk.Size; ++s[v]) {
                                     for(k = 0; k < s[u]; ++k) {
-                                        if(!mask[n + k + s[v] * Chunk.Size].Visible || !mask[n + k + s[v] * Chunk.Size].CanConnect(mask[n])) {
+                                        if(!mask[n + k + s[v] * Chunk.Size].Visible || !mask[n + k + s[v] * Chunk.Size].CanConnect(ref mask[n])) {
                                             done = true;
                                             break;
                                         }
@@ -90,6 +94,7 @@ namespace SurviveCore.World.Rendering {
                                     if(done) break;
                                 }
 
+                                //TODO new chunk data layout
                                 for(l = 0; l < 6; l++) {
                                     k = axis * 30 + l * 5;
                                     vertices.Add(new Vertex(
@@ -124,13 +129,13 @@ namespace SurviveCore.World.Rendering {
             timer.Stop();
             return vertices.Count <= 0 ? null : vertices.ToArray();
         }
-
+        
         private struct BlockFace {
             public bool Visible;
             public int TextureID;
             public int AoID;
 
-            public bool CanConnect(BlockFace bf) {
+            public bool CanConnect(ref BlockFace bf) {
                 return TextureID == bf.TextureID && AoID == bf.AoID;
             }
         }
@@ -147,8 +152,8 @@ namespace SurviveCore.World.Rendering {
         };
 
         private static readonly int[] shift = { 4, 0, 2, 4, 0, 2 };
-
-        private static readonly float[] FaceVertices = new float[] {
+        
+        private static readonly float[] FaceVertices = {
             
             1, 1, 0, 1, 0,
             1, 1, 1, 0, 0,

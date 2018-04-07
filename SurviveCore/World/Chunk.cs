@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using SurviveCore.World.Rendering;
 using SurviveCore.World.Utils;
 
@@ -18,18 +19,18 @@ namespace SurviveCore.World {
         public abstract Chunk GetNeightbor(int d);
 
         public abstract Block GetBlockDirect(int x, int y, int z);
-        public abstract bool SetBlockDirect(int x, int y, int z, Block block);
+        public abstract bool SetBlockDirect(int x, int y, int z, Block block, UpdateSource source = UpdateSource.Modification);
         public abstract byte GetMetaDataDirect(int x, int y, int z);
-        public abstract bool SetMetaDataDirect(int x, int y, int z, byte data);
-        public abstract void Update();
+        public abstract bool SetMetaDataDirect(int x, int y, int z, byte data, UpdateSource source = UpdateSource.Modification);
+        public abstract void Update(UpdateSource source);
         public abstract bool RegenerateMesh(ChunkMesher m);
         public abstract void CleanUp();
         public abstract bool IsFull();
         public abstract bool isEmpty();
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool SetBlockDirect(int x, int y, int z, Block block, byte meta) {
-            return SetBlockDirect(x, y, z, block) && SetMetaDataDirect(x, y, z, meta);
+        public bool SetBlockDirect(int x, int y, int z, Block block, byte meta, UpdateSource source = UpdateSource.Modification) {
+            return SetBlockDirect(x, y, z, block, source) && SetMetaDataDirect(x, y, z, meta, source);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Block GetBlock(int x, int y, int z) {
@@ -40,16 +41,16 @@ namespace SurviveCore.World {
             return FindChunk(ref x, ref y, ref z).GetMetaDataDirect(x,y,z);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool SetMetaData(int x, int y, int z, byte data) {
-            return FindChunk(ref x, ref y, ref z).SetMetaDataDirect(x, y, z, data);
+        public bool SetMetaData(int x, int y, int z, byte data, UpdateSource source = UpdateSource.Modification) {
+            return FindChunk(ref x, ref y, ref z).SetMetaDataDirect(x, y, z, data, source);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool SetBlock(int x, int y, int z, Block block) {
-            return FindChunk(ref x, ref y, ref z).SetBlockDirect(x, y, z, block);
+        public bool SetBlock(int x, int y, int z, Block block, UpdateSource source = UpdateSource.Modification) {
+            return FindChunk(ref x, ref y, ref z).SetBlockDirect(x, y, z, block, source);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool SetBlock(int x, int y, int z, Block block, byte meta) {
-            return FindChunk(ref x, ref y, ref z).SetBlockDirect(x, y, z, block, meta);
+        public bool SetBlock(int x, int y, int z, Block block, byte meta, UpdateSource source = UpdateSource.Modification) {
+            return FindChunk(ref x, ref y, ref z).SetBlockDirect(x, y, z, block, meta, source);
         }
         
         public ChunkLocation Location => location;
@@ -91,7 +92,7 @@ namespace SurviveCore.World {
         
         public override void SetNeighbor(int d, Chunk c, bool caller = true) {
             if(neighbors[d] != c && c != BorderChunk.Instance) {
-                Update();
+                Update(UpdateSource.Neighbor);
             }
             neighbors[d] = c;
             if(caller) {
@@ -99,17 +100,25 @@ namespace SurviveCore.World {
             }
         }
 
-        public override void Update() {
-            if(meshready)
-                world.QueueChunkForRemesh(this);
+        public override void Update(UpdateSource source) {
+            if(!meshready)
+                return;
+            switch (source) {
+                case UpdateSource.Modification:
+                    world.QueueChunkForRemesh(this, 0);
+                    break;
+                case UpdateSource.Generation:
+                case UpdateSource.Loading:
+                    world.QueueChunkForRemesh(this, 1);
+                    break;
+                case UpdateSource.Neighbor:
+                    world.QueueChunkForRemesh(this, 2);
+                    break;
+            }
         }
 
         public void SetMeshUpdates(bool enabled) {
             meshready = enabled;
-        }
-
-        public void SetGenerated() {
-            generated = true;
         }
         
         public override bool RegenerateMesh(ChunkMesher mesher) {
@@ -172,11 +181,11 @@ namespace SurviveCore.World {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public override bool SetBlockDirect(int x, int y, int z, Block block) {
+        public override bool SetBlockDirect(int x, int y, int z, Block block, UpdateSource source) {
             Block pre = GetBlockDirect(x, y, z);
             blocks[x | (y << BPC) | (z << 2 * BPC)] = block;
             if(pre != block)
-                CallChunkUpdate(x, y, z);
+                CallChunkUpdate(x, y, z, source);
             if( pre.IsUnrendered() && !block.IsUnrendered())
                 renderedblocks++;
             if(!pre.IsUnrendered() &&  block.IsUnrendered())
@@ -190,11 +199,11 @@ namespace SurviveCore.World {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public override bool SetMetaDataDirect(int x, int y, int z, byte data) {
+        public override bool SetMetaDataDirect(int x, int y, int z, byte data, UpdateSource source) {
             int pre = GetMetaDataDirect(x, y, z);
             metadata[x | (y << BPC) | (z << 2 * BPC)] = data;
             if(pre != data)
-                CallChunkUpdate(x, y, z);
+                CallChunkUpdate(x, y, z, source);
             return true;
         }
 
@@ -230,22 +239,24 @@ namespace SurviveCore.World {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void CallChunkUpdate(int x, int y, int z) {
-            if(meshready)
+        private void CallChunkUpdate(int x, int y, int z, UpdateSource source) {
+            if(source == UpdateSource.Modification)
                 dirty = true;
-            Update();
+            if(source == UpdateSource.Generation)
+                generated = true;
+            Update(source);
             if(x == 0)
-                neighbors[Direction.NegativeX].Update();
+                neighbors[Direction.NegativeX].Update(source);
             if(y == 0)
-                neighbors[Direction.NegativeY].Update();
+                neighbors[Direction.NegativeY].Update(source);
             if(z == 0)
-                neighbors[Direction.NegativeZ].Update();
+                neighbors[Direction.NegativeZ].Update(source);
             if(x == Size - 1)
-                neighbors[Direction.PositiveX].Update();
+                neighbors[Direction.PositiveX].Update(source);
             if(y == Size - 1)
-                neighbors[Direction.PositiveY].Update();
+                neighbors[Direction.PositiveY].Update(source);
             if(z == Size - 1)
-                neighbors[Direction.PositiveZ].Update();
+                neighbors[Direction.PositiveZ].Update(source);
         }
         
     }
@@ -257,7 +268,7 @@ namespace SurviveCore.World {
         private static readonly Block Border = new Block("Border", "", true, true);
         
         public override void SetNeighbor(int d, Chunk c, bool caller = true) { }
-        public override void Update() {
+        public override void Update(UpdateSource source) {
             
         }
 
@@ -282,7 +293,7 @@ namespace SurviveCore.World {
             return Border;
         }
 
-        public override bool SetBlockDirect(int x, int y, int z, Block block) {
+        public override bool SetBlockDirect(int x, int y, int z, Block block, UpdateSource source) {
             return false;
         }
 
@@ -290,7 +301,7 @@ namespace SurviveCore.World {
             return 0;
         }
 
-        public override bool SetMetaDataDirect(int x, int y, int z, byte data) {
+        public override bool SetMetaDataDirect(int x, int y, int z, byte data, UpdateSource source) {
             return false;
         }
 
@@ -300,4 +311,11 @@ namespace SurviveCore.World {
 
     }
 
+    public enum UpdateSource {
+        Modification,
+        Generation,
+        Loading,
+        Neighbor
+    }
+    
 }
