@@ -49,8 +49,6 @@ namespace SurviveCore {
                 Rotation = rot
             };
             
-            
-
             gui = new GuiRenderer(dx.Device);
             
             GC.Collect();
@@ -58,6 +56,8 @@ namespace SurviveCore {
         
         private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt };
         private int slot;
+
+        private float veloctiy;
 
         public void Update(InputManager.InputState input) {
             if (input.IsForeground) {
@@ -74,15 +74,21 @@ namespace SurviveCore {
                     movement += camera.Right;
                 movement.Y = 0;
                 movement = movement.LengthSquared() > 0 ? Vector3.Normalize(movement) : Vector3.Zero;
-                if (input.IsKey(VirtualKey.SPACE))
-                    movement += Vector3.UnitY;
-                if (input.IsKey(VirtualKey.SHIFT))
-                    movement -= Vector3.UnitY;
                 
-                movement *= input.IsKey(VirtualKey.CONTROL) ? 0.3f : 0.04f;
+                
                 if(Settings.Instance.Physics) {
+                    movement *= input.IsKey(VirtualKey.CONTROL) ? 0.06f : 0.03f;
+                    veloctiy -= 0.0013f;
+                    if (IsGrounded(camera.Position))
+                        veloctiy = input.IsKey(VirtualKey.SPACE) ? 0.06f : 0;
+                    movement.Y += veloctiy;
                     camera.Position = ClampToWorld(camera.Position, movement);
                 }else {
+                    if (input.IsKey(VirtualKey.SPACE))
+                        movement += Vector3.UnitY;
+                    if (input.IsKey(VirtualKey.SHIFT))
+                        movement -= Vector3.UnitY;
+                    movement *= input.IsKey(VirtualKey.CONTROL) ? 0.3f : 0.06f;
                     camera.Position += movement;
                 }
                 if (input.MouseCaptured) {
@@ -113,9 +119,18 @@ namespace SurviveCore {
 
 
         private Vector3 ClampToWorld(Vector3 pos, Vector3 mov) {
-            bool x = CanMoveTo(pos + new Vector3(mov.X, 0, 0));
-            bool y = CanMoveTo(pos + new Vector3(0, mov.Y, 0));
-            bool z = CanMoveTo(pos + new Vector3(0, 0, mov.Z));
+            const float pecision = 0.005f;
+            bool x = true;
+            while(x && !CanMoveTo(pos + new Vector3(mov.X, 0, 0)))
+                x = Math.Abs(mov.X /= 2) > pecision;
+
+            bool y = true;
+            while(y && !CanMoveTo(pos + new Vector3(0, mov.Y, 0)))
+                y = Math.Abs(mov.Y /= 2) > pecision;
+
+            bool z = true;
+            while(z && !CanMoveTo(pos + new Vector3(0, 0, mov.Z)))
+                z = Math.Abs(mov.Z /= 2) > pecision;
 
             return pos + new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0); 
         }
@@ -137,6 +152,10 @@ namespace SurviveCore {
                    IsAir(pos + new Vector3(-0.4f, -0.55f,  0.4f));
         }
 
+        private bool IsGrounded(Vector3 pos) {
+            return !CanMoveTo(pos + new Vector3(0, -0.05f, 0));
+        }
+        
         private Vector3? FindIntersection(bool pre) {
             Vector3 forward = camera.Forward;
             for(float f = 0; f < 7; f += 0.5f) {
