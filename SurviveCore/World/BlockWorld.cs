@@ -46,7 +46,6 @@ namespace SurviveCore.World {
 	    private readonly Stopwatch updateTimer;
 	    private int averageChunkUpdates;
 
-	    private readonly Thread[] loadingthreads;
 	    private readonly object loadingthreadlock = new object();
 	    private bool disposing = false;
 	    
@@ -64,9 +63,8 @@ namespace SurviveCore.World {
             mesher = new ChunkMesher();
 	        updateTimer = new Stopwatch();
 	        
-	        loadingthreads = new Thread[MaxLoadingThreads];
 	        for (int i = 0; i < MaxLoadingThreads; i++) {
-		        loadingthreads[i] = new Thread(() => {
+		        new Thread(() => {
 			        ChunkLocation l = new ChunkLocation(0, 0, 0);
 			        while (true) {
 				        lock (loadingthreadlock) {
@@ -88,8 +86,7 @@ namespace SurviveCore.World {
 		        }) {
 			        Name = "LoadingThread " + (i + 1),
 			        Priority = LoadingThreadPriority
-		        };
-		        loadingthreads[i].Start();
+		        }.Start();
 	        }
 
 	        UpdateChunkQueues();
@@ -243,9 +240,6 @@ namespace SurviveCore.World {
 	        disposing = true;
 	        lock (loadingthreadlock) {
 		        Monitor.PulseAll(loadingthreadlock);
-	        }
-	        foreach(Thread t in loadingthreads) {
-		        t.Join();
 	        }
 	        foreach(Chunk c in chunkMap.Values)
 		        chunkUnloadStack.Push(c);

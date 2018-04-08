@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Threading;
 using LiteDB;
 using SurviveCore.DirectX;
 using SurviveCore.World;
@@ -28,6 +29,7 @@ namespace SurviveCore {
             );
             
             Console.WriteLine("Vector hardware acceleration: " + Vector.IsHardwareAccelerated);
+            Thread.CurrentThread.Priority = ThreadPriority.Highest;
             try {
                 ApplicationHelpers.SetupDefaultExceptionHandlers();
 

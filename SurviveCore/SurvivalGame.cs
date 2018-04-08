@@ -59,8 +59,6 @@ namespace SurviveCore {
         private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt };
         private int slot;
 
-        //private float velocity;
-
         public void Update(InputManager.InputState input) {
             if (input.IsForeground) {
                 if(input.IsKeyDown(VirtualKey.ESCAPE))
@@ -74,8 +72,14 @@ namespace SurviveCore {
                     movement += camera.Left;
                 if (input.IsKey(VirtualKey.D))
                     movement += camera.Right;
+                movement.Y = 0;
                 movement = movement.LengthSquared() > 0 ? Vector3.Normalize(movement) : Vector3.Zero;
-                movement *= input.IsKey(VirtualKey.SHIFT) ? 0.3f : 0.06f;
+                if (input.IsKey(VirtualKey.SPACE))
+                    movement += Vector3.UnitY;
+                if (input.IsKey(VirtualKey.SHIFT))
+                    movement -= Vector3.UnitY;
+                
+                movement *= input.IsKey(VirtualKey.CONTROL) ? 0.3f : 0.04f;
                 if(Settings.Instance.Physics) {
                     camera.Position = ClampToWorld(camera.Position, movement);
                 }else {
@@ -101,18 +105,6 @@ namespace SurviveCore {
                
             slot = Math.Abs(input.MouseWheel / 120) % inventory.Length;
             
-            //if(Keyboard[Key.Left])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, -0.1f);
-            //if(Keyboard[Key.Right]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Up, 0.1f);
-            //if(Keyboard[Key.Up])    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, 0.1f);
-            //if(Keyboard[Key.Down])  camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Left, -0.1f);
-            //if(Keyboard[Key.PageUp]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Forward, 0.1f);
-            //if(Keyboard[Key.PageDown]) camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Forward, -0.1f);
-//
-            //slot = Math.Abs(Mouse.Wheel / 2 % inventory.Length);
-//
-            //Title = "Block: " + inventory[slot].Name;
-
-            input.Update();
         }
 
         private bool IsAir(Vector3 pos) {
@@ -121,46 +113,28 @@ namespace SurviveCore {
 
 
         private Vector3 ClampToWorld(Vector3 pos, Vector3 mov) {
-            //bool x = IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f,  0.4f, -0.4f)) &&
-            //         IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f,  0.4f,  0.4f)) &&
-            //         IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f,  0.0f, -0.4f)) &&
-            //         IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f,  0.0f,  0.4f)) &&
-            //         IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f, -1.5f, -0.4f)) &&
-            //         IsAir(pos + new Vector3(mov.X + mov.X < 0 ? -0.4f : 0.4f, -1.5f,  0.4f));
-            //bool y = IsAir(pos + new Vector3(-0.4f, mov.Y + mov.Y < 0 ? -1.5f : 0.4f, -0.4f)) &&
-            //         IsAir(pos + new Vector3( 0.4f, mov.Y + mov.Y < 0 ? -1.5f : 0.4f, -0.4f)) &&
-            //         IsAir(pos + new Vector3( 0.4f, mov.Y + mov.Y < 0 ? -1.5f : 0.4f,  0.4f)) &&
-            //         IsAir(pos + new Vector3(-0.4f, mov.Y + mov.Y < 0 ? -1.5f : 0.4f,  0.4f));
-            //bool z = IsAir(pos + new Vector3(-0.4f,  0.4f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f)) &&
-            //         IsAir(pos + new Vector3( 0.4f,  0.4f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f)) &&
-            //         IsAir(pos + new Vector3(-0.4f,  0.0f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f)) &&
-            //         IsAir(pos + new Vector3( 0.4f,  0.0f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f)) &&
-            //         IsAir(pos + new Vector3(-0.4f, -1.5f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f)) &&
-            //         IsAir(pos + new Vector3( 0.4f, -1.5f, mov.Z + mov.Z < 0 ? -0.4f : 0.4f));
             bool x = CanMoveTo(pos + new Vector3(mov.X, 0, 0));
             bool y = CanMoveTo(pos + new Vector3(0, mov.Y, 0));
             bool z = CanMoveTo(pos + new Vector3(0, 0, mov.Z));
 
-            //if (!CanMoveTo(pos + new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0)))
-            //    Console.WriteLine("Error");
             return pos + new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0); 
         }
 
         private bool CanMoveTo(Vector3 pos) {
-            return IsAir(pos + new Vector3(-0.4f,  0.4f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f,  0.4f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f,  0.4f,  0.4f)) &&
-                   IsAir(pos + new Vector3(-0.4f,  0.4f,  0.4f)) &&
+            return IsAir(pos + new Vector3(-0.4f,  0.40f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f,  0.40f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f,  0.40f,  0.4f)) &&
+                   IsAir(pos + new Vector3(-0.4f,  0.40f,  0.4f)) &&
 
-                   IsAir(pos + new Vector3(-0.4f, -1.5f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f, -1.5f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f, -1.5f,  0.4f)) &&
-                   IsAir(pos + new Vector3(-0.4f, -1.5f,  0.4f)) &&
+                   IsAir(pos + new Vector3(-0.4f, -1.50f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f, -1.50f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f, -1.50f,  0.4f)) &&
+                   IsAir(pos + new Vector3(-0.4f, -1.50f,  0.4f)) &&
 
-                   IsAir(pos + new Vector3(-0.4f, -1.0f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f, -1.0f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f, -1.0f,  0.4f)) &&
-                   IsAir(pos + new Vector3(-0.4f, -1.0f,  0.4f));
+                   IsAir(pos + new Vector3(-0.4f, -0.55f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f, -0.55f, -0.4f)) &&
+                   IsAir(pos + new Vector3( 0.4f, -0.55f,  0.4f)) &&
+                   IsAir(pos + new Vector3(-0.4f, -0.55f,  0.4f));
         }
 
         private Vector3? FindIntersection(bool pre) {
