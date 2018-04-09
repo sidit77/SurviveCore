@@ -88,7 +88,7 @@ namespace SurviveCore.World.Rendering {
             blockmapping = temp.ToImmutableDictionary();
 
             colorsampler = new SamplerState(device, new SamplerStateDescription {
-                Filter = Filter.Anisotropic,
+                Filter = Filter.MinPointMagMipLinear,
                 AddressU = TextureAddressMode.Wrap,
                 AddressV = TextureAddressMode.Wrap,
                 AddressW = TextureAddressMode.Wrap,

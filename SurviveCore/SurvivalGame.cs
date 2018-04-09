@@ -5,6 +5,7 @@ using System.Numerics;
 using SharpDX.Direct3D11;
 using SurviveCore.DirectX;
 using SurviveCore.Gui;
+using SurviveCore.Physics;
 using SurviveCore.World;
 using SurviveCore.World.Rendering;
 using SurviveCore.World.Saving;
@@ -23,6 +24,7 @@ namespace SurviveCore {
         private Camera camera;
         private WorldRenderer worldrenderer;
         private BlockWorld world;
+        private PhysicsWorld physics;
         private WorldSave savegame;
         private GuiRenderer gui;
         
@@ -42,7 +44,7 @@ namespace SurviveCore {
             worldrenderer = new WorldRenderer(dx.Device);
             savegame = new WorldSave("./Assets/World.db");
             world = new BlockWorld(worldrenderer, savegame);
-
+            physics = new PhysicsWorld(world);
             savegame.GetPlayerData("default", out Vector3 pos, out Quaternion rot);
             camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.1f, 320.0f) {
                 Position = pos,
@@ -77,12 +79,13 @@ namespace SurviveCore {
                 
                 
                 if(Settings.Instance.Physics) {
-                    movement *= input.IsKey(VirtualKey.CONTROL) ? 0.06f : 0.03f;
-                    veloctiy -= 0.0013f;
-                    if (IsGrounded(camera.Position))
-                        veloctiy = input.IsKey(VirtualKey.SPACE) ? 0.06f : 0;
+                    //TODO fix the stuttering
+                    movement *= input.IsKey(VirtualKey.SHIFT) ? 0.06f : 0.03f;
+                    veloctiy -= 0.0010f;
+                    if (physics.IsGrounded(camera.Position))
+                        veloctiy = input.IsKeyDown(VirtualKey.SPACE) ? 0.05f : 0;
                     movement.Y += veloctiy;
-                    camera.Position = ClampToWorld(camera.Position, movement);
+                    camera.Position = physics.ClampToWorld(camera.Position, movement);
                 }else {
                     if (input.IsKey(VirtualKey.SPACE))
                         movement += Vector3.UnitY;
@@ -102,7 +105,7 @@ namespace SurviveCore {
                     }
                     if (input.IsKeyDown(VirtualKey.RBUTTON) || input.IsKeyDown(VirtualKey.E)) {
                         Vector3? intersection = FindIntersection(true);
-                        if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !CanMoveTo(camera.Position)) {
+                        if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !physics.CanMoveTo(camera.Position)) {
                             world.SetBlock(intersection.Value, Blocks.Air);
                         }
                     }
@@ -111,49 +114,6 @@ namespace SurviveCore {
                
             slot = Math.Abs(input.MouseWheel / 120) % inventory.Length;
             
-        }
-
-        private bool IsAir(Vector3 pos) {
-            return !world.GetBlock(pos).IsSolid();
-        }
-
-
-        private Vector3 ClampToWorld(Vector3 pos, Vector3 mov) {
-            const float pecision = 0.005f;
-            bool x = true;
-            while(x && !CanMoveTo(pos + new Vector3(mov.X, 0, 0)))
-                x = Math.Abs(mov.X /= 2) > pecision;
-
-            bool y = true;
-            while(y && !CanMoveTo(pos + new Vector3(0, mov.Y, 0)))
-                y = Math.Abs(mov.Y /= 2) > pecision;
-
-            bool z = true;
-            while(z && !CanMoveTo(pos + new Vector3(0, 0, mov.Z)))
-                z = Math.Abs(mov.Z /= 2) > pecision;
-
-            return pos + new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0); 
-        }
-
-        private bool CanMoveTo(Vector3 pos) {
-            return IsAir(pos + new Vector3(-0.4f,  0.40f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f,  0.40f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f,  0.40f,  0.4f)) &&
-                   IsAir(pos + new Vector3(-0.4f,  0.40f,  0.4f)) &&
-
-                   IsAir(pos + new Vector3(-0.4f, -1.50f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f, -1.50f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f, -1.50f,  0.4f)) &&
-                   IsAir(pos + new Vector3(-0.4f, -1.50f,  0.4f)) &&
-
-                   IsAir(pos + new Vector3(-0.4f, -0.55f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f, -0.55f, -0.4f)) &&
-                   IsAir(pos + new Vector3( 0.4f, -0.55f,  0.4f)) &&
-                   IsAir(pos + new Vector3(-0.4f, -0.55f,  0.4f));
-        }
-
-        private bool IsGrounded(Vector3 pos) {
-            return !CanMoveTo(pos + new Vector3(0, -0.05f, 0));
         }
         
         private Vector3? FindIntersection(bool pre) {
