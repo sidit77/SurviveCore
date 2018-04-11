@@ -63,6 +63,8 @@ namespace SurviveCore {
 
         public void Update(InputManager.InputState input) {
             if (input.IsForeground) {
+                if(input.IsKeyDown(VirtualKey.F1))
+                    camera.Rotation = Quaternion.Identity;
                 if(input.IsKeyDown(VirtualKey.ESCAPE))
                     input.MouseCaptured = !input.MouseCaptured;
                 Vector3 movement = Vector3.Zero;

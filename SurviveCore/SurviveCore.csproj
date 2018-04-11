@@ -3,7 +3,6 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <StartupObject>SurviveCore.Program</StartupObject>
-    <ApplicationIcon>gamelogo.ico</ApplicationIcon>
     <OutputTypeEx>exe</OutputTypeEx>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
