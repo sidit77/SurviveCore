@@ -173,6 +173,7 @@ namespace SurviveCore.World.Saving {
 		    }
 
 		    public static unsafe void Deserialize(Chunk c, ChunkData cd) {
+			    //TODO combine both arrays and make some size checks
 			    fixed(byte* bstart = cd.Blocks)
 			    fixed(byte* mstart = cd.Meta) {
 				    byte* bpointer = bstart + 0;
