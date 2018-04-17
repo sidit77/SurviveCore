@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using LiteDB;
@@ -14,6 +15,8 @@ namespace SurviveCore.World.Saving {
         
         private readonly LiteDatabase blockDatabase;
         private readonly LiteCollection<ChunkData> savedchunks;
+	    private readonly LiteCollection<Setting> settings;
+	    private readonly LiteCollection<PlayerState> players;
 	    
 	    private readonly Stack<ChunkData> savedata;
         
@@ -30,14 +33,18 @@ namespace SurviveCore.World.Saving {
         public WorldSave(string path) {
             blockDatabase = new LiteDatabase(path);
             savedchunks = blockDatabase.GetCollection<ChunkData>("chunks");
-            
-            if(!blockDatabase.CollectionExists("settings")) {
-                blockDatabase.GetCollection<Setting>("settings").Insert(new Setting("seed", new Random().Next()));
+	        settings = blockDatabase.GetCollection<Setting>("settings");
+	        players = blockDatabase.GetCollection<PlayerState>("players");
+	        
+            if(settings.FindById("seed") == null) {
+	            settings.Insert(new Setting("seed", new Random().Next()));
             }
-            
+
+	        Console.WriteLine("Loaded world {0} with seed {1} and {2} chunks", Path.GetFileName(path), settings.FindById("seed").Value, savedchunks.Count());
+	        
 	        savedata = new Stack<ChunkData>();
 	        
-            generator = new DefaultWorldGenerator(blockDatabase.GetCollection<Setting>("settings").FindById("seed").Value);//(int)Stopwatch.GetTimestamp()
+            generator = new DefaultWorldGenerator(settings.FindById("seed").Value);//(int)Stopwatch.GetTimestamp()
             
             savingtimer = new AverageTimer();
             loadingtimer = new AverageTimer();
@@ -77,13 +84,13 @@ namespace SurviveCore.World.Saving {
 	    }
 
 	    public void GetPlayerData(string name, out Vector3 pos, out Quaternion rot) {
-		    PlayerState ps = blockDatabase.GetCollection<PlayerState>("players").FindById(name);
+		    PlayerState ps = players.FindById(name);
 		    pos = ps?.Position ?? new Vector3(0, 50, 0);
 		    rot = ps?.Rotation ?? Quaternion.Identity;
 	    }
 	    
 	    public void SavePlayerData(string name, Vector3 pos, Quaternion rot) {
-		    blockDatabase.GetCollection<PlayerState>("players").Upsert(new PlayerState(name, pos, rot));
+		    players.Upsert(new PlayerState(name, pos, rot));
 	    }
 	    
         public void Dispose() {
@@ -166,6 +173,7 @@ namespace SurviveCore.World.Saving {
 		    }
 
 		    public static unsafe void Deserialize(Chunk c, ChunkData cd) {
+			    //TODO combine both arrays and make some size checks
 			    fixed(byte* bstart = cd.Blocks)
 			    fixed(byte* mstart = cd.Meta) {
 				    byte* bpointer = bstart + 0;
