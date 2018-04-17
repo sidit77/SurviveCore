@@ -26,9 +26,6 @@
     <PackageReference Include="WinApi.Windows.Controls" Version="4.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FastNoise\FastNoise.csproj" />
-  </ItemGroup>
-  <ItemGroup>
     <None Update="Assets\Gui\Fonts\Abel.dds">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
