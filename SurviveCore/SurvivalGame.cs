@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
+using System.Net;
 using System.Numerics;
 using SharpDX.Direct3D11;
 using SurviveCore.DirectX;
@@ -202,6 +204,7 @@ namespace SurviveCore {
             gui.Dispose();
             savegame.SavePlayerData("default", camera.Position, camera.Rotation);
             savegame.Dispose();
+            File.Delete("./Assets/World.db");
         }
 
     }

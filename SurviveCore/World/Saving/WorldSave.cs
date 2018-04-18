@@ -44,7 +44,7 @@ namespace SurviveCore.World.Saving {
 	        
 	        savedata = new Stack<ChunkData>();
 	        
-            generator = new DefaultWorldGenerator(settings.FindById("seed").Value);//(int)Stopwatch.GetTimestamp()
+            generator = new NewWorldGenerator(settings.FindById("seed").Value);//(int)Stopwatch.GetTimestamp()
             
             savingtimer = new AverageTimer();
             loadingtimer = new AverageTimer();

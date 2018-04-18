@@ -42,6 +42,40 @@ namespace SurviveCore.World {
         }
         
     }
+
+
+    public class NewWorldGenerator : IWorldGenerator {
+
+        private FastNoise fn;
+        
+        public NewWorldGenerator(int seed) {
+            fn = new FastNoise(seed);
+        }
+        
+        public void FillChunk(Chunk chunk) {
+
+            ChunkLocation l = chunk.Location;
+            
+            
+            fn.SetFrequency(0.0025f);
+            fn.SetNoiseType(FastNoise.NoiseType.SimplexFractal);
+            fn.SetFractalOctaves(3);
+            fn.SetFractalGain(0.3f);
+            fn.SetFractalLacunarity(3);
+            fn.SetGradientPerturbAmp(30);
+            for(int x = 0; x < Chunk.Size; x++) {
+                for(int y = 0; y < Chunk.Size; y++) {
+                    for(int z = 0; z < Chunk.Size; z++) {
+                        int loc = (l.WY + y - 20);
+                        float noise = 0.4f + fn.GetNoise(x + l.WX, z + l.WZ) * 0.7f;
+                        chunk.SetBlockDirect(x, y, z, (loc - 130 * noise * noise)  < 0 ? Blocks.Stone : Blocks.Air);
+                    }
+                }
+            }
+            
+        }
+    }
+    
    
 }
 
