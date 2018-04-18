@@ -46,10 +46,17 @@ namespace SurviveCore.World {
 
     public class NewWorldGenerator : IWorldGenerator {
 
-        private FastNoise fn;
+        private FastNoise heightmapnoise;
         
         public NewWorldGenerator(int seed) {
-            fn = new FastNoise(seed);
+            
+            heightmapnoise = new FastNoise(seed);
+            heightmapnoise.SetFrequency(0.0025f);
+            heightmapnoise.SetNoiseType(FastNoise.NoiseType.SimplexFractal);
+            heightmapnoise.SetFractalOctaves(3);
+            heightmapnoise.SetFractalGain(0.3f);
+            heightmapnoise.SetFractalLacunarity(3);
+            heightmapnoise.SetGradientPerturbAmp(30);
         }
         
         public void FillChunk(Chunk chunk) {
@@ -57,17 +64,12 @@ namespace SurviveCore.World {
             ChunkLocation l = chunk.Location;
             
             
-            fn.SetFrequency(0.0025f);
-            fn.SetNoiseType(FastNoise.NoiseType.SimplexFractal);
-            fn.SetFractalOctaves(3);
-            fn.SetFractalGain(0.3f);
-            fn.SetFractalLacunarity(3);
-            fn.SetGradientPerturbAmp(30);
+            
             for(int x = 0; x < Chunk.Size; x++) {
                 for(int y = 0; y < Chunk.Size; y++) {
                     for(int z = 0; z < Chunk.Size; z++) {
-                        int loc = (l.WY + y - 20);
-                        float noise = 0.4f + fn.GetNoise(x + l.WX, z + l.WZ) * 0.7f;
+                        int loc = (l.WY + y - 40);
+                        float noise = 0.4f + heightmapnoise.GetNoise(x + l.WX, z + l.WZ) * 0.7f;
                         chunk.SetBlockDirect(x, y, z, (loc - 130 * noise * noise)  < 0 ? Blocks.Stone : Blocks.Air);
                     }
                 }
