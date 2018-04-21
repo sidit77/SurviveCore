@@ -70,7 +70,7 @@ namespace SurviveCore.World {
                     for(int z = 0; z < Chunk.Size; z++) {
                         int loc = (l.WY + y - 40);
                         float noise = 0.4f + heightmapnoise.GetNoise(x + l.WX, z + l.WZ) * 0.7f;
-                        chunk.SetBlockDirect(x, y, z, (loc - 130 * noise * noise)  < 0 ? Blocks.Stone : Blocks.Air);
+                        chunk.SetBlockDirect(x, y, z, (loc - 130 * noise * noise)  < 0 ? Blocks.Stone : (l.WY + y < 60 ? Blocks.Water : Blocks.Air));
                     }
                 }
             }

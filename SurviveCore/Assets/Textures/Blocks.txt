@@ -3,3 +3,4 @@ Grass_Side.png
 Grass_Top.png
 Dirt.png
 Bricks.png
+Water.png

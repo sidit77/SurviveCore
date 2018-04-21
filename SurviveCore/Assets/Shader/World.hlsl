@@ -35,7 +35,7 @@ cbuffer cbPerFrame{
 
 float4 PS(VS_OUTPUT input) : SV_TARGET {
     float4 color = colortexture.Sample(colorsampler, float3(input.Texcoord, input.TexID)).rgba;
-     
+
     float ao = aotexture.Sample(aosampler, float3(input.Texcoord, input.AOCase)).a * 0.2 + 0.8;
    
     [flatten] if((enabled & 1) != 0){
