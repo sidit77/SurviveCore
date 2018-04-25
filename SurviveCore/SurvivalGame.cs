@@ -101,7 +101,7 @@ namespace SurviveCore {
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (1f / 600) * mpos.X);
 
                     const float anglediff = 0.001f;
-                    float angle = MathF.Acos(Vector3.Dot(Vector3.Normalize(camera.Forward), Vector3.UnitY));
+                    float angle = MathF.Acos(Vector3.Dot(camera.Forward, Vector3.UnitY));
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right, MathHelper.Clamp((1f / 600) * mpos.Y + angle, anglediff, MathF.PI - anglediff) - angle);
                     
                     if (input.IsKeyDown(VirtualKey.LBUTTON) || input.IsKeyDown(VirtualKey.Q)) {
