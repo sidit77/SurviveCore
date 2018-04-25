@@ -98,9 +98,12 @@ namespace SurviveCore {
                 }
                 if (input.MouseCaptured) {
                     var mpos = input.DeltaMousePosition;
-                    camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)(mpos.X) / 600);
-                    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right , (float)(mpos.Y) / 600);
-                    //TODO clamp vertical camera
+                    camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (1f / 600) * mpos.X);
+
+                    const float anglediff = 0.001f;
+                    float angle = MathF.Acos(Vector3.Dot(Vector3.Normalize(camera.Forward), Vector3.UnitY));
+                    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right, MathHelper.Clamp((1f / 600) * mpos.Y + angle, anglediff, MathF.PI - anglediff) - angle);
+                    
                     if (input.IsKeyDown(VirtualKey.LBUTTON) || input.IsKeyDown(VirtualKey.Q)) {
                         Vector3? intersection = FindIntersection(false);
                         if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
