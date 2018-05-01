@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace SurviveCore.World.Utils {
     
@@ -20,6 +21,11 @@ namespace SurviveCore.World.Utils {
             v.Y = (float)Math.Round(v.Y);
             v.Z = (float)Math.Round(v.Z);
             return v;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int Clamp(this int v, int min, int max){
+            return v < min ? min : v > max ? max : v;
         }
 
     }

@@ -186,6 +186,7 @@ namespace SurviveCore.World {
             blocks[x | (y << BPC) | (z << 2 * BPC)] = block;
             if(pre != block)
                 CallChunkUpdate(x, y, z, source);
+            //TODO add IsSolid somewhere to fix the bug with non-solid blocks
             if( pre.IsUnrendered() && !block.IsUnrendered())
                 renderedblocks++;
             if(!pre.IsUnrendered() &&  block.IsUnrendered())
@@ -316,6 +317,7 @@ namespace SurviveCore.World {
         Generation,
         Loading,
         Neighbor
+        //TODO Add a AO remesh source to solve outdated ao-aocases
     }
     
 }

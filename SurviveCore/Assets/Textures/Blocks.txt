@@ -4,3 +4,7 @@ Grass_Top.png
 Dirt.png
 Bricks.png
 Water.png
+Sand.png
+Wood.png
+Wood_Top.png
+Leaves.png

@@ -5,6 +5,7 @@ using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using LiteDB;
+using SurviveCore.World.Generating;
 using SurviveCore.World.Utils;
 
 namespace SurviveCore.World.Saving {
@@ -44,7 +45,7 @@ namespace SurviveCore.World.Saving {
 	        
 	        savedata = new Stack<ChunkData>();
 	        
-            generator = new NewWorldGenerator(settings.FindById("seed").Value);//(int)Stopwatch.GetTimestamp()
+            generator = new AdvancedWorldGenerator(settings.FindById("seed").Value);//(int)Stopwatch.GetTimestamp()
             
             savingtimer = new AverageTimer();
             loadingtimer = new AverageTimer();
@@ -57,11 +58,11 @@ namespace SurviveCore.World.Saving {
 			ChunkData data = savedchunks.FindById(BsonMapper.Global.ToDocument(c.Location));
 			loadingtimer.Stop();
 			if (data == null) {
-			    generator.FillChunk(c);
-			}else {
 				generationtimer.Start();
-			    ChunkSerializer.Deserialize(c, data);
+			    generator.FillChunk(c);
 				generationtimer.Stop();
+			}else {
+			    ChunkSerializer.Deserialize(c, data);
 			}
 	    }
 

@@ -58,7 +58,7 @@ namespace SurviveCore {
             GC.Collect();
         }
         
-        private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt };
+        private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt, Blocks.Sand, Blocks.Wood, Blocks.Leaves };
         private int slot;
 
         private float veloctiy;
