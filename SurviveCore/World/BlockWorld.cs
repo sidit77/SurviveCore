@@ -41,7 +41,7 @@ namespace SurviveCore.World {
         private readonly SimplePriorityQueue<ChunkLocation, int> chunkLoadQueue;
         private readonly Stack<Chunk> chunkUnloadStack;
 	    private readonly ConcurrentHashSet<ChunkLocation> currentlyLoading;
-	    private readonly ConcurrentQueue<WorldChunk> loadedChunks;
+	    private readonly ConcurrentQueue<Chunk> loadedChunks;
 
 	    private readonly Stopwatch updateTimer;
 	    private int averageChunkUpdates;
@@ -58,7 +58,7 @@ namespace SurviveCore.World {
             chunkLoadQueue = new SimplePriorityQueue<ChunkLocation, int>();
             chunkUnloadStack = new Stack<Chunk>();
 	        currentlyLoading = new ConcurrentHashSet<ChunkLocation>();
-	        loadedChunks = new ConcurrentQueue<WorldChunk>();
+	        loadedChunks = new ConcurrentQueue<Chunk>();
 	        
             mesher = new ChunkMesher();
 	        updateTimer = new Stopwatch();
@@ -79,7 +79,7 @@ namespace SurviveCore.World {
 					        continue;
 
 				        currentlyLoading.Add(l);
-				        WorldChunk chunk = WorldChunk.CreateWorldChunk(l, this);
+				        Chunk chunk = Chunk.CreateChunk(l, this);
 				        save.FillChunk(chunk);
 				        loadedChunks.Enqueue(chunk);
 			        }
@@ -131,17 +131,17 @@ namespace SurviveCore.World {
 	    
         public Block GetBlock(int x, int y, int z) {
 	        ChunkLocation l = ChunkLocation.FromPos(x, y, z);
-            return GetChunk(l).GetBlockDirect(x - l.WX, y - l.WY, z - l.WZ);
+            return GetChunk(l)?.GetBlockDirect(x - l.WX, y - l.WY, z - l.WZ) ?? Chunk.Border;
         }
 
         public bool SetBlock(int x, int y, int z, Block b) {
 	        ChunkLocation l = ChunkLocation.FromPos(x, y, z);
-            return GetChunk(l).SetBlockDirect(x - l.WX, y - l.WY, z - l.WZ, b);
+            return GetChunk(l)?.SetBlockDirect(x - l.WX, y - l.WY, z - l.WZ, b) ?? false;
         }
 
         public bool SetBlock(int x, int y, int z, Block b, byte m) {
 	        ChunkLocation l = ChunkLocation.FromPos(x, y, z);
-            return GetChunk(l).SetBlockDirect(x - l.WX, y - l.WY, z - l.WZ, b, m);
+            return GetChunk(l)?.SetBlockDirect(x - l.WX, y - l.WY, z - l.WZ, b, m) ?? false;
         }
         
         public Block GetBlock(Vector3 vec) {
@@ -183,7 +183,7 @@ namespace SurviveCore.World {
 
         private void LoadChunks() {
 	        while(!loadedChunks.IsEmpty) {
-		        loadedChunks.TryDequeue(out WorldChunk chunk);
+		        loadedChunks.TryDequeue(out Chunk chunk);
 		        for (int d = 0; d < 6; d++)
 			        chunk.SetNeighbor(d, GetChunk(chunk.Location.GetAdjecent(d)));
 		        chunk.SetMeshUpdates(true);
@@ -222,7 +222,7 @@ namespace SurviveCore.World {
         }
 
 	    private Chunk GetChunk(ChunkLocation l) {
-		    return chunkMap.TryGetValue(l, out Chunk c) ? c : BorderChunk.Instance;
+		    return chunkMap.TryGetValue(l, out Chunk c) ? c : null;
 	    }
 	    
         public void QueueChunkForRemesh(Chunk c, int priority) {
