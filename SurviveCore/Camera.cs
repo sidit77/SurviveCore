@@ -67,19 +67,12 @@ namespace SurviveCore {
             set => zFar = value;
         }
         
-        public Vector3 Forward => Vector3.Transform(forward, Quaternion.Conjugate(rotation));
-        public Vector3 Back => Vector3.Transform(back   , Quaternion.Conjugate(rotation));
-        public Vector3 Left => Vector3.Transform(left   , Quaternion.Conjugate(rotation));
-        public Vector3 Right => Vector3.Transform(right  , Quaternion.Conjugate(rotation));
-        public Vector3 Up => Vector3.Transform(up     , Quaternion.Conjugate(rotation));
-        public Vector3 Down => Vector3.Transform(down   , Quaternion.Conjugate(rotation));
-
-        private static readonly Vector3 forward = new Vector3( 0,  0, -1);
-        private static readonly Vector3 back    = new Vector3( 0,  0,  1);
-        private static readonly Vector3 left    = new Vector3(-1,  0,  0);
-        private static readonly Vector3 right   = new Vector3( 1,  0,  0);
-        private static readonly Vector3 up      = new Vector3( 0,  1,  0);
-        private static readonly Vector3 down    = new Vector3( 0, -1,  0);
+        public Vector3 Forward => Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, Quaternion.Conjugate(rotation)));
+        public Vector3 Back    => Vector3.Normalize(Vector3.Transform( Vector3.UnitZ, Quaternion.Conjugate(rotation)));
+        public Vector3 Left    => Vector3.Normalize(Vector3.Transform(-Vector3.UnitX, Quaternion.Conjugate(rotation)));
+        public Vector3 Right   => Vector3.Normalize(Vector3.Transform( Vector3.UnitX, Quaternion.Conjugate(rotation)));
+        public Vector3 Down    => Vector3.Normalize(Vector3.Transform(-Vector3.UnitY, Quaternion.Conjugate(rotation)));
+        public Vector3 Up      => Vector3.Normalize(Vector3.Transform( Vector3.UnitY, Quaternion.Conjugate(rotation)));
         
     }
     
