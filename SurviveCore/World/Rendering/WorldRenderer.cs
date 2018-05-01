@@ -58,8 +58,8 @@ namespace SurviveCore.World.Rendering {
             worldvs = new VertexShader(device, vscode);
             worldps = new PixelShader (device, pscode);
             
-            vsbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<Matrix4x4>(), BindFlags.ConstantBuffer, ResourceUsage.Default));
-            psbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<ConstantPixelData>(), BindFlags.ConstantBuffer, ResourceUsage.Default));
+            vsbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<Matrix4x4>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, Marshal.SizeOf<Matrix4x4>()));
+            psbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<ConstantPixelData>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, Marshal.SizeOf<ConstantPixelData>()));
             
             layout = new InputLayout(device, vscode, new [] {
                 new InputElement("POSITION", 0, Format.R32G32B32_Float,  0, 0, InputClassification.PerVertexData, 0),
@@ -107,8 +107,8 @@ namespace SurviveCore.World.Rendering {
                 Pos = camera.Position,
                 flags  = (Settings.Instance.AmbientOcclusion ? 1 : 0) | (Settings.Instance.Fog ? 2 : 0),
             };
-            context.UpdateSubresource(ref camera.CameraMatrix, vsbuffer);
-            context.UpdateSubresource(ref cpd, psbuffer);
+            context.MapAndUpdate(ref camera.CameraMatrix, vsbuffer);
+            context.MapAndUpdate(ref cpd, psbuffer);
             context.VertexShader.SetConstantBuffer(0, vsbuffer);
             context.InputAssembler.InputLayout = layout;
             context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;

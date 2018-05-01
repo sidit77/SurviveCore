@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -29,27 +30,17 @@ namespace SurviveCore.DirectX {
         public static RawVector2 Raw(this Vector2 v) {
             return new RawVector2(v.X, v.Y);
         }
-
-        public static byte[] Get(this CompilationResult cr) {
-            if(cr.HasErrors)
-                Console.WriteLine(cr.Message);
-            return cr.Bytecode.Data;
+        
+        public static void MapAndUpdate<T>(this DeviceContext context, T[] data, Resource resource) where T : struct {
+            DataBox db = context.MapSubresource(resource, 0, MapMode.WriteDiscard, MapFlags.None);
+            Utilities.Write(db.DataPointer, data, 0, data.Length);
+            context.UnmapSubresource(resource, 0);
         }
         
-        public static unsafe void UpdateBuffer<T>(this DeviceContext context, Buffer buffer, T[] newValues, int count, int sourceOffset = 0, int destinationOffset = 0) where T : struct{
-            var handle = GCHandle.Alloc(newValues, GCHandleType.Pinned);
-            var bytes = (byte*)handle.AddrOfPinnedObject();
-            var strideInBytes = Marshal.SizeOf<T>();
-            context.UpdateSubresource(
-                new DataBox(new IntPtr(bytes + sourceOffset * strideInBytes)), buffer, 0,
-                new ResourceRegion(
-                    destinationOffset * strideInBytes, 0, 0,
-                    (destinationOffset + count) * strideInBytes, 1, 1));
-            handle.Free();
-        }
-        
-        public static unsafe void UpdateBuffer<T>(this DeviceContext context, Buffer buffer, T[] newValues) where T : struct{
-            UpdateBuffer(context, buffer, newValues, newValues.Length);
+        public static void MapAndUpdate<T>(this DeviceContext context, ref T data, Resource resource) where T : struct{
+            DataBox db = context.MapSubresource(resource, 0, MapMode.WriteDiscard, MapFlags.None);
+            Utilities.Write(db.DataPointer, ref data);
+            context.UnmapSubresource(resource, 0);
         }
         
     }
