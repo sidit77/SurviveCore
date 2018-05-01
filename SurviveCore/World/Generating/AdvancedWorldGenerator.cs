@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using SurviveCore.DirectX;
 using SurviveCore.World.Utils;
 
 namespace SurviveCore.World.Generating {
@@ -127,7 +128,7 @@ namespace SurviveCore.World.Generating {
                     float regionHeight     =(heightRegionNoise.GetNoise(x, z) + 0.25f) * 8.0f / 1.25f * Scale;
                     float baseHeight       = SeaLevel + regionHeight + areaLargeHeight + areaSmallHeight + localBlockHeight;
 
-                    int height = ((int)MathF.Round(baseHeight)).Clamp(0, WorldHeight - 1);
+                    int height = MathHelper.Clamp((int)MathF.Round(baseHeight),0, WorldHeight - 1);
                     
                     float heightShifted = height + SeaLevel - WorldHeight / 2;
                     float worldHeightMod = heightShifted < 0.0f ? 0.0f : -MathF.Pow(heightShifted / WorldHeight, 3.0f) * MathF.Pow(heightShifted * 0.4f, 1.001f);

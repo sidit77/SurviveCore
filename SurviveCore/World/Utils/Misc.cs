@@ -12,23 +12,5 @@ namespace SurviveCore.World.Utils {
         public const int NegativeX = 3;
         public const int PositiveX = 0;
     }
-
-    
-
-    public static class Misc {
-        public static Vector3 Round(this Vector3 v) {
-            v.X = (float)Math.Round(v.X);
-            v.Y = (float)Math.Round(v.Y);
-            v.Z = (float)Math.Round(v.Z);
-            return v;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int Clamp(this int v, int min, int max){
-            return v < min ? min : v > max ? max : v;
-        }
-
-    }
-    
     
 }
