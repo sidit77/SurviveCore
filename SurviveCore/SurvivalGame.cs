@@ -80,7 +80,7 @@ namespace SurviveCore {
                     movement += camera.Right;
                 movement.Y = 0;
                 movement = movement.LengthSquared() > 0 ? Vector3.Normalize(movement) : Vector3.Zero;
-                
+                //TODO Add a acceleration phase
                 
                 if(Settings.Instance.Physics) {
                     //TODO fix the stuttering
