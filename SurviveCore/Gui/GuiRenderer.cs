@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using SharpDX;
 using SharpDX.D3DCompiler;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -10,6 +11,7 @@ using SurviveCore.Gui.Text;
 using WinApi.User32;
 using Buffer = SharpDX.Direct3D11.Buffer;
 using Device = SharpDX.Direct3D11.Device;
+using MapFlags = SharpDX.Direct3D11.MapFlags;
 using Size = NetCoreEx.Geometry.Size;
 
 namespace SurviveCore.Gui {
@@ -23,6 +25,8 @@ namespace SurviveCore.Gui {
         private readonly Buffer vertexbuffer;
         private readonly Buffer instancebuffer;
         private readonly Buffer constantbuffer;
+        private readonly VertexBufferBinding vertexBufferBinding0;
+        private readonly VertexBufferBinding vertexBufferBinding1;
         private readonly InputLayout layout;
         private readonly SamplerState sampler;
         private readonly BlendState blendstate;
@@ -50,11 +54,25 @@ namespace SurviveCore.Gui {
             
             vs = new VertexShader(device, vscode);
             ps = new PixelShader (device, pscode);
-            //TODO ResourceUsage.Dynamic? + more than 500 characters
+            //TODO more than 500 characters
             quads = new Quad[1000];
-            instancebuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<Quad>() * quads.Length, BindFlags.VertexBuffer, ResourceUsage.Default));
-            vertexbuffer = Buffer.Create(device, BindFlags.VertexBuffer, new float[] {0,0,0,1,1,0,0,1,1,1,1,0});
-            constantbuffer = new Buffer(device, new BufferDescription(Marshal.SizeOf<Matrix4x4>(), BindFlags.ConstantBuffer, ResourceUsage.Default));
+            instancebuffer = new Buffer(device, new BufferDescription(
+                Marshal.SizeOf<Quad>() * quads.Length, 
+                ResourceUsage.Dynamic,
+                BindFlags.VertexBuffer, 
+                CpuAccessFlags.Write,
+                ResourceOptionFlags.None, 
+                Marshal.SizeOf<Quad>()
+            ));
+            vertexbuffer = Buffer.Create(device, BindFlags.VertexBuffer, new float[] {0,0,0,1,1,0,0,1,1,1,1,0}, usage:ResourceUsage.Immutable);
+            constantbuffer = new Buffer(device, new BufferDescription(
+                Marshal.SizeOf<Matrix4x4>(),
+                ResourceUsage.Dynamic,
+                BindFlags.ConstantBuffer,
+                CpuAccessFlags.Write,
+                ResourceOptionFlags.None,
+                Marshal.SizeOf<Matrix4x4>()
+            ));
             
             layout = new InputLayout(device, vscode, new [] {
                 new InputElement("POSITION", 0, Format.R32G32_Float,        0, 0, InputClassification.PerVertexData,   0),
@@ -95,6 +113,9 @@ namespace SurviveCore.Gui {
                 DepthComparison = Comparison.Always,
                 IsStencilEnabled = false
             });
+            
+            vertexBufferBinding0 = new VertexBufferBinding(vertexbuffer, 2 * sizeof(float), 0);
+            vertexBufferBinding1 = new VertexBufferBinding(instancebuffer, Marshal.SizeOf<Quad>(), 0);
         }
 
         public void Begin(InputManager.InputState inputState) {
@@ -271,8 +292,8 @@ namespace SurviveCore.Gui {
 
             DepthStencilState state = context.OutputMerger.DepthStencilState;
             context.InputAssembler.InputLayout = layout;
-            context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vertexbuffer, 2 * sizeof(float), 0));
-            context.InputAssembler.SetVertexBuffers(1, new VertexBufferBinding(instancebuffer, Marshal.SizeOf<Quad>(), 0));
+            context.InputAssembler.SetVertexBuffers(0, vertexBufferBinding0);
+            context.InputAssembler.SetVertexBuffers(1, vertexBufferBinding1);
             context.VertexShader.Set(vs);
             context.VertexShader.SetConstantBuffer(0, constantbuffer);
             context.PixelShader.Set(ps);
@@ -280,9 +301,9 @@ namespace SurviveCore.Gui {
             context.PixelShader.SetSampler(0, sampler);
             context.OutputMerger.BlendState = blendstate;
             context.OutputMerger.DepthStencilState = depthstate;
-            context.UpdateSubresource(quads, instancebuffer);
+            context.MapAndUpdate(quads, instancebuffer);
             Matrix4x4 mvp = Matrix4x4.CreateOrthographicOffCenter(0,size.Width, size.Height, 0, -1, 1);
-            context.UpdateSubresource(ref mvp, constantbuffer);
+            context.MapAndUpdate(ref mvp, constantbuffer);
             context.DrawInstanced(6,gquadnr,0,0);
             context.PixelShader.SetShaderResource(0,font.Texture);
             context.DrawInstanced(6,tquadnr,0,textoffset);

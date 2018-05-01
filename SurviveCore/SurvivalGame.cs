@@ -167,22 +167,22 @@ namespace SurviveCore {
             } else {
                 int w = GetClientSize().Width  / 2 - 150;
                 int h = GetClientSize().Height / 2 - 200;
-                if(gui.Button(new Rectangle(w - 180, h +   0, 300, 90), "Wireframe " + (!Settings.Instance.Wireframe ? "on" : "off")))
+                if(gui.Button(new Rectangle(w - 180, h +   0, 300, 90), "Wireframe " + (Settings.Instance.Wireframe ? "on" : "off")))
                     Settings.Instance.ToggleWireframe();
-                if(gui.Button(new Rectangle(w - 180, h + 100, 300, 90), "Ambient Occlusion " + (!Settings.Instance.AmbientOcclusion ? "on" : "off")))
+                if(gui.Button(new Rectangle(w - 180, h + 100, 300, 90), "Ambient Occlusion " + (Settings.Instance.AmbientOcclusion ? "on" : "off")))
                     Settings.Instance.ToggleAmbientOcclusion();
-                if(gui.Button(new Rectangle(w - 180, h + 200, 300, 90), "Fog " + (!Settings.Instance.Fog ? "on" : "off")))
+                if(gui.Button(new Rectangle(w - 180, h + 200, 300, 90), "Fog " + (Settings.Instance.Fog ? "on" : "off")))
                     Settings.Instance.ToggleFog();
-                if(gui.Button(new Rectangle(w - 180, h + 300, 300, 90), "Physics " + (!Settings.Instance.Physics ? "on" : "off")))
+                if(gui.Button(new Rectangle(w - 180, h + 300, 300, 90), "Physics " + (Settings.Instance.Physics ? "on" : "off")))
                     Settings.Instance.TogglePhysics();
                 
-                if(gui.Button(new Rectangle(w + 180, h +  0, 300, 90), "Debug info " + (!Settings.Instance.DebugInfo ? "on" : "off")))
+                if(gui.Button(new Rectangle(w + 180, h +  0, 300, 90), "Debug info " + (Settings.Instance.DebugInfo ? "on" : "off")))
                     Settings.Instance.ToggleDebugInfo();
-                if(gui.Button(new Rectangle(w + 180, h + 100, 300, 90), "Camera updates " + (!Settings.Instance.UpdateCamera ? "on" : "off")))
+                if(gui.Button(new Rectangle(w + 180, h + 100, 300, 90), "Camera updates " + (Settings.Instance.UpdateCamera ? "on" : "off")))
                     Settings.Instance.ToggleUpdateCamera();
-                if(gui.Button(new Rectangle(w + 180, h + 200, 300, 90), "VSync " + (!Settings.Instance.VSync ? "on" : "off")))
+                if(gui.Button(new Rectangle(w + 180, h + 200, 300, 90), "VSync " + (Settings.Instance.VSync ? "on" : "off")))
                     Settings.Instance.ToggleVSync();
-                if(gui.Button(new Rectangle(w + 180, h + 300, 300, 90), "Fullscreen " + (!Settings.Instance.Fullscreen ? "on" : "off")))
+                if(gui.Button(new Rectangle(w + 180, h + 300, 300, 90), "Fullscreen " + (Settings.Instance.Fullscreen ? "on" : "off")))
                     Settings.Instance.ToggleFullscreen();
             }
             
