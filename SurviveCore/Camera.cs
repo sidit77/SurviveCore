@@ -1,11 +1,10 @@
-﻿
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace SurviveCore {
     public class Camera {
-
+        
         public Matrix4x4 CameraMatrix;
-
+        
         private Quaternion rotation;
         private Vector3 position;
         private float fov;
