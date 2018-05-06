@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using SurviveCore.DirectX;
+using SurviveCore.World.Generating.WorldBiomes;
 using SurviveCore.World.Utils;
 
 namespace SurviveCore.World.Generating {
     public class AdvancedWorldGenerator : IWorldGenerator {
         
-        private const float Hot = 0.5f;
-        private const int SeaLevel = 60;
-        private const int WorldHeight = 8 * Chunk.Size;
-        private const float Scale = 2;
+        public const float Hot = 0.5f;
+        public const int SeaLevel = 60;
+        public const int WorldHeight = 8 * Chunk.Size;
+        public const float Scale = 2;
         
         private readonly Random random;
         private readonly FastNoise noise;
@@ -18,7 +21,6 @@ namespace SurviveCore.World.Generating {
         private readonly NoiseMapper heightAreaSmall;
         private readonly NoiseMapper heightAreaLarge;
         private readonly NoiseMapper heightRegionNoise;
-        private readonly NoiseMapper fillerNoise;
         private readonly NoiseMapper temperatureChunkNoise;
         private readonly NoiseMapper temperatureAreaNoise;
         private readonly NoiseMapper temperatureRegionNoise;
@@ -26,8 +28,27 @@ namespace SurviveCore.World.Generating {
         private readonly NoiseMapper humidityAreaNoise;
         private readonly NoiseMapper humidityRegionNoise;
         private readonly NoiseMapper stretchForestSmallNoise;
+
+        
+        private readonly NoiseMapper hillsNoise;
+        private readonly NoiseMapper hillsNoiseAreaSmall;
+        private readonly NoiseMapper hillsNoiseAreaLarge;
+        
+        private readonly NoiseMapper corrosionNoise;
+        
+        private readonly ISet<BiomeSelector> biomeSelectors;
+        
+        
         
         public AdvancedWorldGenerator(int seed) {
+
+            biomeSelectors = new SortedSet<BiomeSelector> {
+                new BeachSelector(0),
+                new OceanSelector(1),
+                new PlainsSelector(2)
+            };
+
+            Console.WriteLine(biomeSelectors.Count);
             
             random = new Random(seed);
             noise = new FastNoise(seed);
@@ -39,7 +60,6 @@ namespace SurviveCore.World.Generating {
             heightAreaSmall         = new NoiseMapper(noise,  413.0f,  467.0f, (float)random.NextDouble(), (float)random.NextDouble());
             heightAreaLarge         = new NoiseMapper(noise,  913.0f,  967.0f, (float)random.NextDouble(), (float)random.NextDouble());
             heightRegionNoise       = new NoiseMapper(noise, 1920.0f, 1811.0f, (float)random.NextDouble(), (float)random.NextDouble());
-            fillerNoise             = new NoiseMapper(noise,   16.0f,   16.0f, (float)random.NextDouble(), (float)random.NextDouble());
             temperatureChunkNoise   = new NoiseMapper(noise,    2.1f,    2.2f, (float)random.NextDouble(), (float)random.NextDouble());
             temperatureAreaNoise    = new NoiseMapper(noise,  260.0f,  273.0f, (float)random.NextDouble(), (float)random.NextDouble());
             temperatureRegionNoise  = new NoiseMapper(noise, 2420.0f, 2590.0f, (float)random.NextDouble(), (float)random.NextDouble());
@@ -48,6 +68,12 @@ namespace SurviveCore.World.Generating {
             humidityRegionNoise     = new NoiseMapper(noise, 1080.0f,  919.0f, (float)random.NextDouble(), (float)random.NextDouble());
             stretchForestSmallNoise = new NoiseMapper(noise,   93.0f,  116.0f, (float)random.NextDouble(), (float)random.NextDouble());
 
+            
+            hillsNoise          = new NoiseMapper(noise, 1397.0f, 1357.0f, (float)random.NextDouble(), (float)random.NextDouble());
+            hillsNoiseAreaSmall = new NoiseMapper(noise, 91.0f,  95.0f, (float)random.NextDouble(), (float)random.NextDouble());
+            hillsNoiseAreaLarge = new NoiseMapper(noise, 147.0f, 149.0f, (float)random.NextDouble(), (float)random.NextDouble());
+
+            corrosionNoise = new NoiseMapper(noise, 2.0f, 2.0f, (float)random.NextDouble(), (float)random.NextDouble());
         }
         
         
@@ -95,13 +121,25 @@ namespace SurviveCore.World.Generating {
             
             ChunkInfo ci = GenerateChunkInfo(l.X, l.Z);
             
+            Random r = new Random(chunk.Location.GetHashCode());
+            
             for(int x = 0; x < Chunk.Size; x++) {
                 for(int z = 0; z < Chunk.Size; z++) {
                     
-                    for(int y = 0; y < Chunk.Size; y++) {
-                        int loc = (l.WY + y);
-                        chunk.SetBlockDirect(x, y, z, loc < ci.GetHeight(x,z) ? (ci.GetHeight(x,z) == SeaLevel || ci.GetHeight(x,z) - 1 == SeaLevel ? Blocks.Sand : Blocks.Stone) : (loc < SeaLevel ? Blocks.Water : Blocks.Air));
-                    }
+                    ci.GetBiome(x,z).FillChunk(chunk, r, x,z, ci.GetHeight(x,z));
+
+                    //for (int y = 0; y < Chunk.Size; y++) {
+                    //    int loc = (l.WY + y);
+                    //    
+                    //    
+                    //    
+                    //    chunk.SetBlockDirect(x, y, z,
+                    //        loc - ci.GetHeight(x, z) < 0
+                    //            ? (ci.GetHeight(x, z) == SeaLevel || ci.GetHeight(x, z) - 1 == SeaLevel
+                    //                ? Blocks.Sand
+                    //                : Blocks.Stone)
+                    //            : (loc < SeaLevel ? Blocks.Water : Blocks.Air));
+                    //}
                 }
             }
             
@@ -117,6 +155,7 @@ namespace SurviveCore.World.Generating {
             float[] temperaturemap = new float[Chunk.Size * Chunk.Size];
             float[] humiditymap = new float[Chunk.Size * Chunk.Size];
             int[] heightmap = new int[Chunk.Size * Chunk.Size];
+            Biome[] biomes = new Biome[Chunk.Size * Chunk.Size];
             
             int i = 0;
             for (int x = cx << Chunk.BPC; x < (cx + 1) << Chunk.BPC; x++) {
@@ -128,6 +167,11 @@ namespace SurviveCore.World.Generating {
                     float regionHeight     =(heightRegionNoise.GetNoise(x, z) + 0.25f) * 8.0f / 1.25f * Scale;
                     float baseHeight       = SeaLevel + regionHeight + areaLargeHeight + areaSmallHeight + localBlockHeight;
 
+                    baseHeight += (baseHeight - SeaLevel) * 0.25f * MathF.Abs((baseHeight - SeaLevel) * 0.15f);
+                    baseHeight += GetHills(x, z);
+
+                    baseHeight += corrosionNoise.GetNoise(x, z) * MathF.Min(1, MathF.Pow(MathF.Max(0, baseHeight - SeaLevel - 20) * 0.02f, 1.5f));
+                    
                     int height = MathHelper.Clamp((int)MathF.Round(baseHeight),0, WorldHeight - 1);
                     
                     float heightShifted = height + SeaLevel - WorldHeight / 2;
@@ -142,25 +186,55 @@ namespace SurviveCore.World.Generating {
                                      (stretchForestSmallNoise.GetNoise(x, z) > (temperature >= Hot ? 0.85f : 0.60f) ? 0.5f : 0.0f) +
                                      worldHeightMod;
 
+                    foreach (var selector in biomeSelectors) {
+                        biomes[i] = selector.GetBiome(x, z, height, temperature, humidity);
+                        if(biomes[i] != null)
+                            break;;
+                    }
+                    if(biomes[i] == null)
+                        throw new ApplicationException(string.Format("Couldnt find a matching biome for {0}, {1}, {2}", height, temperature, humidity));
+                    
                     heightmap[i] = height;
                     temperaturemap[i] = temperature;
                     humiditymap[i] = humidity;
                 }
             }
 
-            return cicache.GetOrAdd((cx,cz), new ChunkInfo(heightmap, temperaturemap, humiditymap));
+            return cicache.GetOrAdd((cx,cz), new ChunkInfo(heightmap, temperaturemap, humiditymap, biomes));
             
         }
 
+        private float GetHills(int blockX, int blockZ) {
+            float hillsNoiseEffective = GetEffectiveHillsNoise(blockX, blockZ);
+            float hillsHeight = (hillsNoiseAreaLarge.GetNoise(blockX, blockZ) * 2.80f +
+                                 hillsNoiseAreaSmall.GetNoise(blockX, blockZ) * 1.59f +
+                                 1.5f) *
+                                 hillsNoiseEffective * 9.0f * Scale; 
+            return hillsHeight;
+        }
+
+        private float GetEffectiveHillsNoise(int blockX, int blockZ) {
+            float hillsNoiseEffective = (hillsNoise.GetNoise(blockX, blockZ) + 0.3f) * 0.9f;
+            if (hillsNoiseEffective >= 0.0) {
+                hillsNoiseEffective = -(MathF.Cos(MathF.PI * MathF.Pow(hillsNoiseEffective, 4.0f)) - 1.0f) / 2.0f; // create a cosine spike from the sinus noise
+                if (hillsNoiseEffective >= 0.01) { // the above calculation tends to lower hillsNoiseEffective to zero
+                    return hillsNoiseEffective;
+                }
+            }
+            return 0.0f;
+        }
+        
         private class ChunkInfo {
             private readonly int[] height;
             private readonly float[] temperature;
             private readonly float[] humidity;
+            private readonly Biome[] biomes;
 
-            public ChunkInfo(int[] height, float[] temperature, float[] humidity) {
+            public ChunkInfo(int[] height, float[] temperature, float[] humidity, Biome[] biomes) {
                 this.height = height;
                 this.temperature = temperature;
                 this.humidity = humidity;
+                this.biomes = biomes;
             }
 
             public int GetHeight(int x, int z) {
@@ -173,6 +247,10 @@ namespace SurviveCore.World.Generating {
             
             public float GetHumidity(int x, int z) {
                 return humidity[z | (x << Chunk.BPC)];
+            }
+            
+            public Biome GetBiome(int x, int z) {
+                return biomes[z | (x << Chunk.BPC)];
             }
             
         }

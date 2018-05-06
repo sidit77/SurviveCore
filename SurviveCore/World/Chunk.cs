@@ -131,7 +131,7 @@ namespace SurviveCore.World {
             blocks[x | (y << BPC) | (z << 2 * BPC)] = block;
             if(pre != block)
                 CallChunkUpdate(x, y, z, source);
-            //TODO add IsSolid somewhere to fix the bug with non-solid blocks
+            //TODO add IsSolid somewhere to fix the invisiblilty
             if( pre.IsUnrendered() && !block.IsUnrendered())
                 renderedblocks++;
             if(!pre.IsUnrendered() &&  block.IsUnrendered())

@@ -208,7 +208,6 @@ namespace SurviveCore {
             gui.Dispose();
             savegame.SavePlayerData("default", camera.Position, camera.Rotation);
             savegame.Dispose();
-            File.Delete("./Assets/World.db");
         }
 
     }
