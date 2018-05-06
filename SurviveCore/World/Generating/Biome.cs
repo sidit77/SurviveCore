@@ -9,7 +9,7 @@ namespace SurviveCore.World.Generating {
     
     public abstract class Biome {
 
-        public abstract void FillChunk(Chunk c, Random r,int x, int z, int height);
+        public abstract void FillChunk(Chunk c, Random r,int x, int z, float height);
 
     }
 
@@ -21,7 +21,7 @@ namespace SurviveCore.World.Generating {
             this.priority = priority;
         }
         
-        public abstract Biome GetBiome(int x, int z, int height, float temperature, float humidity);
+        public abstract Biome GetBiome(int x, int z, float height, float temperature, float humidity);
 
         public int CompareTo(BiomeSelector other) {
             if (ReferenceEquals(this, other)) return 0;

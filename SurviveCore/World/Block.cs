@@ -9,7 +9,7 @@ namespace SurviveCore.World {
         public static readonly Block Grass = new Block("Grass", "Grass_Side.png").SetTexture(1, "Grass_Top.png").SetTexture(4, "Dirt.png");
         public static readonly Block Bricks = new Block("Bricks", "Bricks.png");
         public static readonly Block Dirt = new Block("Dirt", "Dirt.png");
-        public static readonly Block Water = new SemiTransparentBlock("Water", "Water.png", false);
+        public static readonly Block Water = new SemiTransparentBlock("Water", "Water.png", false, false, false);
         public static readonly Block Sand = new Block("Sand", "Sand.png");
         public static readonly Block Wood = new Block("Wood", "Wood.png").SetTexture(1, "Wood_Top.png").SetTexture(4, "Wood_Top.png");
         public static readonly Block Leaves = new Block("Leaves", "Leaves.png");
@@ -69,7 +69,7 @@ namespace SurviveCore.World {
     }
 
     class SemiTransparentBlock : Block {
-        public SemiTransparentBlock(string name, string texture, bool solid = true, bool unrendered = false) : base(name, texture, solid, unrendered) {
+        public SemiTransparentBlock(string name, string texture, bool solid = true, bool unrendered = false, bool hitbox = true) : base(name, texture, solid, unrendered, hitbox) {
         }
 
         public override bool IsSolid(Block against) {

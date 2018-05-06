@@ -94,7 +94,8 @@ namespace SurviveCore.World {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsFull() {
-            return renderedblocks == 1 << (BPC * 3);
+            //return renderedblocks == 1 << (BPC * 3);
+            return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

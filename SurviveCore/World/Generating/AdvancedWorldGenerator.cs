@@ -154,7 +154,7 @@ namespace SurviveCore.World.Generating {
             
             float[] temperaturemap = new float[Chunk.Size * Chunk.Size];
             float[] humiditymap = new float[Chunk.Size * Chunk.Size];
-            int[] heightmap = new int[Chunk.Size * Chunk.Size];
+            float[] heightmap = new float[Chunk.Size * Chunk.Size];
             Biome[] biomes = new Biome[Chunk.Size * Chunk.Size];
             
             int i = 0;
@@ -172,7 +172,7 @@ namespace SurviveCore.World.Generating {
 
                     baseHeight += corrosionNoise.GetNoise(x, z) * MathF.Min(1, MathF.Pow(MathF.Max(0, baseHeight - SeaLevel - 20) * 0.02f, 1.5f));
                     
-                    int height = MathHelper.Clamp((int)MathF.Round(baseHeight),0, WorldHeight - 1);
+                    float height = MathHelper.Clamp(baseHeight,0, WorldHeight - 1);
                     
                     float heightShifted = height + SeaLevel - WorldHeight / 2;
                     float worldHeightMod = heightShifted < 0.0f ? 0.0f : -MathF.Pow(heightShifted / WorldHeight, 3.0f) * MathF.Pow(heightShifted * 0.4f, 1.001f);
@@ -225,19 +225,19 @@ namespace SurviveCore.World.Generating {
         }
         
         private class ChunkInfo {
-            private readonly int[] height;
+            private readonly float[] height;
             private readonly float[] temperature;
             private readonly float[] humidity;
             private readonly Biome[] biomes;
 
-            public ChunkInfo(int[] height, float[] temperature, float[] humidity, Biome[] biomes) {
+            public ChunkInfo(float[] height, float[] temperature, float[] humidity, Biome[] biomes) {
                 this.height = height;
                 this.temperature = temperature;
                 this.humidity = humidity;
                 this.biomes = biomes;
             }
 
-            public int GetHeight(int x, int z) {
+            public float GetHeight(int x, int z) {
                 return height[z | (x << Chunk.BPC)];
             }
 
