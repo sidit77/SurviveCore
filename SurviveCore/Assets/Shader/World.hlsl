@@ -42,7 +42,7 @@ float4 PS(VS_OUTPUT input) : SV_TARGET {
 	   color.rgb *= ao;
 	}
 	[flatten] if((enabled & 2) != 0){
-        color = lerp(color,fogcolor, clamp((length(pos.xz - input.WorldPos.xz) - 215)/30, 0, 1));
+        color = lerp(color,fogcolor, clamp((length(pos.xz - input.WorldPos.xz) - 415)/30, 0, 1));
     }
 	
 	return color;

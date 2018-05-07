@@ -68,7 +68,6 @@ namespace SurviveCore.World.Generating {
             humidityRegionNoise     = new NoiseMapper(noise, 1080.0f,  919.0f, (float)random.NextDouble(), (float)random.NextDouble());
             stretchForestSmallNoise = new NoiseMapper(noise,   93.0f,  116.0f, (float)random.NextDouble(), (float)random.NextDouble());
 
-            
             hillsNoise          = new NoiseMapper(noise, 1397.0f, 1357.0f, (float)random.NextDouble(), (float)random.NextDouble());
             hillsNoiseAreaSmall = new NoiseMapper(noise, 91.0f,  95.0f, (float)random.NextDouble(), (float)random.NextDouble());
             hillsNoiseAreaLarge = new NoiseMapper(noise, 147.0f, 149.0f, (float)random.NextDouble(), (float)random.NextDouble());
@@ -216,10 +215,9 @@ namespace SurviveCore.World.Generating {
         private float GetEffectiveHillsNoise(int blockX, int blockZ) {
             float hillsNoiseEffective = (hillsNoise.GetNoise(blockX, blockZ) + 0.3f) * 0.9f;
             if (hillsNoiseEffective >= 0.0) {
-                hillsNoiseEffective = -(MathF.Cos(MathF.PI * MathF.Pow(hillsNoiseEffective, 4.0f)) - 1.0f) / 2.0f; // create a cosine spike from the sinus noise
-                if (hillsNoiseEffective >= 0.01) { // the above calculation tends to lower hillsNoiseEffective to zero
+                hillsNoiseEffective = -(MathF.Cos(MathF.PI * MathF.Pow(hillsNoiseEffective, 4.0f)) - 1.0f) / 2.0f;
+                if (hillsNoiseEffective >= 0.01)
                     return hillsNoiseEffective;
-                }
             }
             return 0.0f;
         }
