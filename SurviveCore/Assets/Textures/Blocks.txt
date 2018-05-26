@@ -1,5 +1,0 @@
-Stone.png
-Grass_Side.png
-Grass_Top.png
-Dirt.png
-Bricks.png

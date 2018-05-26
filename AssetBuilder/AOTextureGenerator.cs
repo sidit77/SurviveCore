@@ -8,7 +8,9 @@ namespace AssetBuilder{
         public static void GenerateFile(string path)
         {
 
-            Console.WriteLine("Starting to generate file");
+            Console.Write("Generating ao texture " + path + ": ");
+
+            path = Path.Combine(Program.destdir, path);
 
             const int resolution = 32;
             const int mipmap = 6;
@@ -61,7 +63,7 @@ namespace AssetBuilder{
                 }
             }
 
-            Console.WriteLine("Complete!");
+            Console.WriteLine("Done");
         }
 
         private static byte[] GetAOTexture(int level)

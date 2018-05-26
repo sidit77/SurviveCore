@@ -42,7 +42,7 @@ namespace SurviveCore.Gui {
         private int tquadnr;
         
         public GuiRenderer(Device device) {
-            guitexture = DDSLoader.LoadDDS(device, "./Assets/Gui/Gui.dds");
+            guitexture = DDSLoader.LoadDDS(device, "./Assets/Textures/Gui.dds");
             font = new Font(device, "./Assets/Gui/Fonts/Abel.fnt");
 
             byte[] vscode = File.ReadAllBytes("Assets/Shader/Gui.vs.fxo");
