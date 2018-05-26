@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using SharpDX;
@@ -43,15 +44,11 @@ namespace SurviveCore.Gui {
         public GuiRenderer(Device device) {
             guitexture = DDSLoader.LoadDDS(device, "./Assets/Gui/Gui.dds");
             font = new Font(device, "./Assets/Gui/Fonts/Abel.fnt");
-            
-            CompilationResult vscode = ShaderBytecode.CompileFromFile("./Assets/Shader/Gui.hlsl", "VS", "vs_5_0");
-            CompilationResult pscode = ShaderBytecode.CompileFromFile("./Assets/Shader/Gui.hlsl", "PS", "ps_5_0");
-            
-            if(vscode.HasErrors)
-                Console.WriteLine(vscode.Message);
-            if(pscode.HasErrors)
-                Console.WriteLine(pscode.Message);
-            
+
+            byte[] vscode = File.ReadAllBytes("Assets/Shader/Gui.vs.fxo");
+            byte[] pscode = File.ReadAllBytes("Assets/Shader/Gui.ps.fxo");
+
+
             vs = new VertexShader(device, vscode);
             ps = new PixelShader (device, pscode);
             //TODO more than 500 characters

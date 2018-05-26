@@ -47,14 +47,9 @@ namespace SurviveCore.World.Rendering {
             rendererPool = new ObjectPool<ChunkRenderer>(RendererPoolSize, ()=>new ChunkRenderer(device));
             renderer = new HashSet<ChunkRenderer>();
 
-            CompilationResult vscode = ShaderBytecode.CompileFromFile("./Assets/Shader/World.hlsl", "VS", "vs_5_0");
-            CompilationResult pscode = ShaderBytecode.CompileFromFile("./Assets/Shader/World.hlsl", "PS", "ps_5_0");
-            
-            if(vscode.HasErrors)
-                Console.WriteLine(vscode.Message);
-            if(pscode.HasErrors)
-                Console.WriteLine(pscode.Message);
-            
+            byte[] vscode = File.ReadAllBytes("Assets/Shader/World.vs.fxo");
+            byte[] pscode = File.ReadAllBytes("Assets/Shader/World.ps.fxo");
+
             worldvs = new VertexShader(device, vscode);
             worldps = new PixelShader (device, pscode);
             
