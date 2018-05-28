@@ -27,6 +27,9 @@ namespace AssetBuilder
 
             CompressTexture("Assets/Textures/Gui.png", Format.R8G8B8A8_UNorm);
             CompressTextureFolder("Assets/Textures/Blocks/", Format.BC1_UNorm);
+            
+            Copy("Assets/Gui/Fonts/Abel.dds");
+            Copy("Assets/Gui/Fonts/Abel.fnt");
         }
 
         private static void CompileShader(string src, params string[] shadertypes)
@@ -47,6 +50,11 @@ namespace AssetBuilder
                 }
             }
             Console.WriteLine("Done");
+        }
+
+        private static void Copy(string path) {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(destdir, path)));
+            File.Copy(Path.Combine(srcdir, path), Path.Combine(destdir, path), true);
         }
         
         private static void CompressTexture(string path, Format format)

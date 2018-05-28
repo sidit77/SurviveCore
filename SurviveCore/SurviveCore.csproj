@@ -29,15 +29,4 @@
   <ItemGroup>
     <ProjectReference Include="..\AssetBuilder\AssetBuilder.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <None Update="Assets\Gui\Fonts\Abel.dds">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\Gui\Fonts\Abel.fnt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Assets\Textures\Source\" />
-  </ItemGroup>
 </Project>
