@@ -26,7 +26,4 @@
     <PackageReference Include="WinApi.Desktop" Version="4.0.0" />
     <PackageReference Include="WinApi.Windows.Controls" Version="4.0.0" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\AssetBuilder\AssetBuilder.csproj" />
-  </ItemGroup>
 </Project>

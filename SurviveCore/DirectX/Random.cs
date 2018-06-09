@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using SharpDX;
-using SharpDX.D3DCompiler;
 using SharpDX.Direct3D11;
 using SharpDX.Mathematics.Interop;
-using Buffer = SharpDX.Direct3D11.Buffer;
 
 namespace SurviveCore.DirectX {
     public static class RandomExtensions {

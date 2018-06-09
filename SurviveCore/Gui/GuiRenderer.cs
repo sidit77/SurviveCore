@@ -3,8 +3,6 @@ using System.Drawing;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using SharpDX;
-using SharpDX.D3DCompiler;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using SurviveCore.DirectX;
@@ -12,7 +10,6 @@ using SurviveCore.Gui.Text;
 using WinApi.User32;
 using Buffer = SharpDX.Direct3D11.Buffer;
 using Device = SharpDX.Direct3D11.Device;
-using MapFlags = SharpDX.Direct3D11.MapFlags;
 using Size = NetCoreEx.Geometry.Size;
 
 namespace SurviveCore.Gui {
