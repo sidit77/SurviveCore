@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
+using System.Net;
 using System.Numerics;
 using SharpDX.Direct3D11;
 using SurviveCore.DirectX;
@@ -46,7 +48,7 @@ namespace SurviveCore {
             world = new BlockWorld(worldrenderer, savegame);
             physics = new PhysicsWorld(world);
             savegame.GetPlayerData("default", out Vector3 pos, out Quaternion rot);
-            camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.1f, 320.0f) {
+            camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.1f, 620.0f) {
                 Position = pos,
                 Rotation = rot
             };
@@ -56,7 +58,7 @@ namespace SurviveCore {
             GC.Collect();
         }
         
-        private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt };
+        private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt, Blocks.Sand, Blocks.Wood, Blocks.Leaves };
         private int slot;
 
         private float veloctiy;

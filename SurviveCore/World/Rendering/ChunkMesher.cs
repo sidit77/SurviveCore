@@ -57,7 +57,8 @@ namespace SurviveCore.World.Rendering {
                     bool visible = false;
                     for(p[v] = 0; p[v] < Chunk.Size; ++p[v]) {
                         for(p[u] = 0; p[u] < Chunk.Size; ++p[u]) {
-                            visible |= mask[n++].Visible = !chunk.GetBlockDirect(p[0], p[1], p[2]).IsUnrendered() && !(chunk.GetBlock(p[0] + q[0], p[1] + q[1], p[2] + q[2]).IsSolid());
+                            Block b = chunk.GetBlockDirect(p[0], p[1], p[2]);
+                            visible |= mask[n++].Visible = !b.IsUnrendered() && !(chunk.GetBlock(p[0] + q[0], p[1] + q[1], p[2] + q[2]).IsSolid(b));
                             if(mask[n - 1].Visible) {
                                 mask[n - 1].TextureID = blockmapping[chunk.GetBlockDirect(p[0], p[1], p[2]).GetTexture(axis)];
                                 mask[n - 1].AoID = 0;
@@ -65,7 +66,7 @@ namespace SurviveCore.World.Rendering {
                                     s[d] = 0;
                                     s[u] = AoOffsets[(l + shift[axis]) % 8 * 2 + 0] * (axis == 5 ? -1 : 1); //d == 2 ? v : u
                                     s[v] = AoOffsets[(l + shift[axis]) % 8 * 2 + 1] * (axis == 3 ? -1 : 1); //d == 2 ? u : v
-                                    mask[n - 1].AoID += (chunk.GetBlock(p[0] + q[0] + s[0], p[1] + q[1] + s[1], p[2] + q[2] + s[2]).IsSolid() ? 1 : 0) << l;
+                                    mask[n - 1].AoID += (chunk.GetBlock(p[0] + q[0] + s[0], p[1] + q[1] + s[1], p[2] + q[2] + s[2]).IsSolid(b) ? 1 : 0) << l;
                                 }
                             }
                         }

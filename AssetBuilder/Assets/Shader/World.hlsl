@@ -35,14 +35,14 @@ cbuffer cbPerFrame{
 
 float4 PS(VS_OUTPUT input) : SV_TARGET {
     float4 color = colortexture.Sample(colorsampler, float3(input.Texcoord, input.TexID)).rgba;
-     
+
     float ao = aotexture.Sample(aosampler, float3(input.Texcoord, input.AOCase)).a * 0.2 + 0.8;
    
     [flatten] if((enabled & 1) != 0){
 	   color.rgb *= ao;
 	}
 	[flatten] if((enabled & 2) != 0){
-        color = lerp(color,fogcolor, clamp((length(pos.xz - input.WorldPos.xz) - 215)/30, 0, 1));
+        color = lerp(color,fogcolor, clamp((length(pos.xz - input.WorldPos.xz) - 415)/30, 0, 1));
     }
 	
 	return color;

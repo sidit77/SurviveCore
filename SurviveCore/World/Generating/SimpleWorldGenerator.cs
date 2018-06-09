@@ -1,18 +1,13 @@
 ﻿using System;
 
-namespace SurviveCore.World {
-    public interface IWorldGenerator {
-        void FillChunk(Chunk chunk);
-    }
-    
-    public class DefaultWorldGenerator : IWorldGenerator{
-
+namespace SurviveCore.World.Generating {
+    public class SimpleWorldGenerator : IWorldGenerator{
         private readonly FastNoise fn;
 
         [ThreadStatic]
         private static float[,,] noisecache;
         
-        public DefaultWorldGenerator(int seed) {
+        public SimpleWorldGenerator(int seed) {
             fn = new FastNoise(seed);
         }
         
@@ -40,8 +35,5 @@ namespace SurviveCore.World {
                 }
             }
         }
-        
     }
-   
 }
-

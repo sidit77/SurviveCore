@@ -94,7 +94,8 @@ namespace SurviveCore.World {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsFull() {
-            return renderedblocks == 1 << (BPC * 3);
+            //return renderedblocks == 1 << (BPC * 3);
+            return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -131,6 +132,7 @@ namespace SurviveCore.World {
             blocks[x | (y << BPC) | (z << 2 * BPC)] = block;
             if(pre != block)
                 CallChunkUpdate(x, y, z, source);
+            //TODO add IsSolid somewhere to fix the invisiblilty
             if( pre.IsUnrendered() && !block.IsUnrendered())
                 renderedblocks++;
             if(!pre.IsUnrendered() &&  block.IsUnrendered())
@@ -247,6 +249,7 @@ namespace SurviveCore.World {
         Generation,
         Loading,
         Neighbor
+        //TODO Add a AO remesh source to solve outdated ao-aocases
     }
     
 }

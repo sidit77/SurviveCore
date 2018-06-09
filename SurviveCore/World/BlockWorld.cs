@@ -25,8 +25,8 @@ namespace SurviveCore.World {
 	    private const ThreadPriority LoadingThreadPriority = ThreadPriority.BelowNormal;
 	    private const int MaxLoadingThreads = 1;
 	    private const int MaxUpdateTime = 5;
-        private const int Height = 4;
-        private const int LoadDistance = 9;
+        private const int Height = 8;
+        private const int LoadDistance = 15;
 	    private const int UnloadDistance = LoadDistance + 1;
 
         private int centerX;

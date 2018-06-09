@@ -82,7 +82,7 @@ namespace SurviveCore.Physics {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsAir(Vector3 pos) {
-            return !world.GetBlock(pos).IsSolid();
+            return !world.GetBlock(pos).HasHitbox();
         }
         
     }

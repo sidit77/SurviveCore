@@ -18,7 +18,7 @@
             wireframe = false;
             fog = true;
             ambientocclusion = true;
-            physics = true;
+            physics = false;
             updatecamera = true;
             debuginfo = false;
             vsync = true;
