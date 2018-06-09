@@ -34,7 +34,7 @@ namespace SurviveCore.World.Saving {
         public WorldSave(string path) {
             blockDatabase = new LiteDatabase(path);
 
-	        //blockDatabase.DropCollection("chunks");
+	        blockDatabase.DropCollection("chunks");
 	        
             savedchunks = blockDatabase.GetCollection<ChunkData>("chunks");
 	        settings = blockDatabase.GetCollection<Setting>("settings");
