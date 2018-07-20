@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
-using System.Net;
 using System.Numerics;
 using SharpDX.Direct3D11;
 using SurviveCore.DirectX;
@@ -112,12 +110,14 @@ namespace SurviveCore {
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right, MathHelper.Clamp((1f / 600) * mpos.Y + angle, anglediff, MathF.PI - anglediff) - angle);
                     
                     if (input.IsKeyDown(VirtualKey.LBUTTON) || input.IsKeyDown(VirtualKey.Q)) {
-                        if (FindIntersection(out Vector3 intersection) && world.SetBlock(intersection, Blocks.Air)) {
+                        if (FindIntersection(out Vector3 intersection, out _) && world.SetBlock(intersection, Blocks.Air)) {
                         }
                     }
                     if (input.IsKeyDown(VirtualKey.RBUTTON) || input.IsKeyDown(VirtualKey.E)) {
-                        //TODO prevent replacing a block
-                        if (FindIntersection(out Vector3 intersection) && GetHitNormal(intersection, out Vector3 normal)&& world.SetBlock(intersection + normal, inventory[slot]) && !physics.CanMoveTo(camera.Position)) {
+                        if (FindIntersection(out Vector3 intersection, out Vector3 normal) 
+                            && world.GetBlock(intersection + normal) == Blocks.Air 
+                            && world.SetBlock(intersection + normal, inventory[slot]) 
+                            && !physics.CanMoveTo(camera.Position)) {
                             world.SetBlock(intersection + normal, Blocks.Air);
                         }
                     }
@@ -128,37 +128,44 @@ namespace SurviveCore {
             
         }
         
-        private bool FindIntersection(out Vector3 pos) {
-            //TODO check normal to make sure no block got skipped
+        private bool FindIntersection(out Vector3 pos, out Vector3 normal) {
             if(User32Methods.GetKeyState(VirtualKey.T).IsPressed)
                 particles.Clear();
+            normal = Vector3.Zero;
+            if (!Raycast(out pos))
+                return false;
+            pos = pos.Round();
+            int counter = 0;
+            do {
+                pos += normal;
+                if (!GetHitNormal(pos, out normal) || counter++ > 5)
+                    return false;
+            } while (world.GetBlock(pos + normal) != Blocks.Air);
+            return true;
+        }
+
+        private bool Raycast(out Vector3 pos) {
             pos = Vector3.Zero;
             Vector3 forward = camera.Forward;
             for(float f = 0; f < 7; f += 0.25f) {
                 spawnParticle(camera.Position + forward * f, 0.03f, Color.Aquamarine);
-                if(world.GetBlock(camera.Position + forward * f) != Blocks.Air) {
-                    pos = camera.Position + forward * f;
-                    return true;
-                }
+                if (world.GetBlock(camera.Position + forward * f) == Blocks.Air) continue;
+                pos = camera.Position + forward * f;
+                return true;
             }
             return false;
-            
         }
-
+        
         private bool GetHitNormal(Vector3 pos, out Vector3 hitnormal) {
-            pos = pos.Round();
             Vector3 forward = camera.Forward;
-            hitnormal = Vector3.Zero;
-            float distance = float.PositiveInfinity;
             for(int i = 0; i < 6; i++) {
-                Vector3 normal = ((Direction)i).GetDirection();
-                if (!RayFaceIntersection(forward, camera.Position, normal, pos, out float d)) continue;
+                hitnormal = ((Direction)i).GetDirection();
+                if (!RayFaceIntersection(forward, camera.Position, hitnormal, pos, out float d)) continue;
                 spawnParticle(camera.Position + forward * d, 0.04f, Color.Red);
-                if (d > distance) continue;
-                distance = d;
-                hitnormal = normal;
+                return true;
             }
-            return hitnormal.LengthSquared() > 0;
+            hitnormal = Vector3.Zero;
+            return false;
         }
 
         private readonly List<Particle> particles = new List<Particle>();
@@ -166,11 +173,10 @@ namespace SurviveCore {
         private bool RayFaceIntersection(Vector3 raydir, Vector3 rayorig, Vector3 normal, Vector3 cubepos, out float distance) {
             distance = float.PositiveInfinity;
             float ndotdir = Vector3.Dot(raydir, normal);
-            if (MathF.Abs(ndotdir) < 0.0001f)
+            if (-ndotdir < 0.0001f)
                 return false;
             Vector3 center = cubepos + normal * 0.5f;
-            float d = Vector3.Dot(center, normal);
-            distance = -(Vector3.Dot(normal, rayorig) - d) / ndotdir;
+            distance = -(Vector3.Dot(normal, rayorig) - Vector3.Dot(center, normal)) / ndotdir;
             if (distance < 0)
                 return false;
             Vector3 i = (rayorig + raydir * distance) - center;
