@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="SharpDX.D3DCompiler" Version="4.0.1" />
     <PackageReference Include="SharpDX.DXGI" Version="4.0.1" />
+    <PackageReference Include="SharpFontStandard" Version="4.0.1" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Assets\Shader\Gui.hlsl">
@@ -21,7 +22,4 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="dotnet $(TargetPath) $(OutDir) $(ProjectDir)" />
-  </Target>
 </Project>

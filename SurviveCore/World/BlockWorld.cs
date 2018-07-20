@@ -185,7 +185,7 @@ namespace SurviveCore.World {
 	        while(!loadedChunks.IsEmpty) {
 		        loadedChunks.TryDequeue(out Chunk chunk);
 		        for (int d = 0; d < 6; d++)
-			        chunk.SetNeighbor(d, GetChunk(chunk.Location.GetAdjecent(d)));
+			        chunk.SetNeighbor(d, GetChunk(chunk.Location.GetAdjecent((Direction)d)));
 		        chunk.SetMeshUpdates(true);
 		        chunkMap.Add(chunk.Location, chunk);
 		        currentlyLoading.TryRemove(chunk.Location);

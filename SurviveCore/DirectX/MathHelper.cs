@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace SurviveCore.DirectX {
     public static class MathHelper {
@@ -21,5 +23,9 @@ namespace SurviveCore.DirectX {
             return v;
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector3 Round(this Vector3 v) {
+            return new Vector3(MathF.Round(v.X),MathF.Round(v.Y),MathF.Round(v.Z));
+        }
     }
 }

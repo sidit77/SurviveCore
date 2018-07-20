@@ -31,7 +31,7 @@ namespace SurviveCore.World {
         public int WY => y << Chunk.BPC;
         public int WZ => z << Chunk.BPC;
 
-        public ChunkLocation GetAdjecent(int direction) {
+        public ChunkLocation GetAdjecent(Direction direction) {
             switch(direction) {
                 case Direction.NegativeX: return new ChunkLocation(x - 1, y    , z    );
                 case Direction.NegativeY: return new ChunkLocation(x    , y - 1, z    );

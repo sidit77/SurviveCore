@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -7,10 +8,12 @@ using System.Numerics;
 using SharpDX.Direct3D11;
 using SurviveCore.DirectX;
 using SurviveCore.Gui;
+using SurviveCore.Particles;
 using SurviveCore.Physics;
 using SurviveCore.World;
 using SurviveCore.World.Rendering;
 using SurviveCore.World.Saving;
+using SurviveCore.World.Utils;
 using WinApi.User32;
 using WinApi.Windows;
 using WinApi.Windows.Controls;
@@ -29,6 +32,7 @@ namespace SurviveCore {
         private PhysicsWorld physics;
         private WorldSave savegame;
         private GuiRenderer gui;
+        private ParticleRenderer particlerenderer;
         
         protected override void OnCreate(ref CreateWindowPacket packet) {
             base.OnCreate(ref packet);
@@ -44,6 +48,7 @@ namespace SurviveCore {
             });
             
             worldrenderer = new WorldRenderer(dx.Device);
+            particlerenderer = new ParticleRenderer(dx.Device);
             savegame = new WorldSave("./Assets/World.db");
             world = new BlockWorld(worldrenderer, savegame);
             physics = new PhysicsWorld(world);
@@ -107,14 +112,13 @@ namespace SurviveCore {
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right, MathHelper.Clamp((1f / 600) * mpos.Y + angle, anglediff, MathF.PI - anglediff) - angle);
                     
                     if (input.IsKeyDown(VirtualKey.LBUTTON) || input.IsKeyDown(VirtualKey.Q)) {
-                        Vector3? intersection = FindIntersection(false);
-                        if (intersection.HasValue && world.SetBlock(intersection.Value, Blocks.Air)) {
+                        if (FindIntersection(out Vector3 intersection) && world.SetBlock(intersection, Blocks.Air)) {
                         }
                     }
                     if (input.IsKeyDown(VirtualKey.RBUTTON) || input.IsKeyDown(VirtualKey.E)) {
-                        Vector3? intersection = FindIntersection(true);
-                        if (intersection.HasValue && world.SetBlock(intersection.Value, inventory[slot]) && !physics.CanMoveTo(camera.Position)) {
-                            world.SetBlock(intersection.Value, Blocks.Air);
+                        //TODO prevent replacing a block
+                        if (FindIntersection(out Vector3 intersection) && GetHitNormal(intersection, out Vector3 normal)&& world.SetBlock(intersection + normal, inventory[slot]) && !physics.CanMoveTo(camera.Position)) {
+                            world.SetBlock(intersection + normal, Blocks.Air);
                         }
                     }
                 }
@@ -124,17 +128,60 @@ namespace SurviveCore {
             
         }
         
-        private Vector3? FindIntersection(bool pre) {
+        private bool FindIntersection(out Vector3 pos) {
+            //TODO check normal to make sure no block got skipped
+            if(User32Methods.GetKeyState(VirtualKey.T).IsPressed)
+                particles.Clear();
+            pos = Vector3.Zero;
             Vector3 forward = camera.Forward;
-            for(float f = 0; f < 7; f += 0.5f) {
+            for(float f = 0; f < 7; f += 0.25f) {
+                spawnParticle(camera.Position + forward * f, 0.03f, Color.Aquamarine);
                 if(world.GetBlock(camera.Position + forward * f) != Blocks.Air) {
-                    return camera.Position + forward * (f - (pre ? 0.5f : 0));
+                    pos = camera.Position + forward * f;
+                    return true;
                 }
             }
-            return null;
+            return false;
+            
         }
 
+        private bool GetHitNormal(Vector3 pos, out Vector3 hitnormal) {
+            pos = pos.Round();
+            Vector3 forward = camera.Forward;
+            hitnormal = Vector3.Zero;
+            float distance = float.PositiveInfinity;
+            for(int i = 0; i < 6; i++) {
+                Vector3 normal = ((Direction)i).GetDirection();
+                if (!RayFaceIntersection(forward, camera.Position, normal, pos, out float d)) continue;
+                spawnParticle(camera.Position + forward * d, 0.04f, Color.Red);
+                if (d > distance) continue;
+                distance = d;
+                hitnormal = normal;
+            }
+            return hitnormal.LengthSquared() > 0;
+        }
 
+        private readonly List<Particle> particles = new List<Particle>();
+        
+        private bool RayFaceIntersection(Vector3 raydir, Vector3 rayorig, Vector3 normal, Vector3 cubepos, out float distance) {
+            distance = float.PositiveInfinity;
+            float ndotdir = Vector3.Dot(raydir, normal);
+            if (MathF.Abs(ndotdir) < 0.0001f)
+                return false;
+            Vector3 center = cubepos + normal * 0.5f;
+            float d = Vector3.Dot(center, normal);
+            distance = -(Vector3.Dot(normal, rayorig) - d) / ndotdir;
+            if (distance < 0)
+                return false;
+            Vector3 i = (rayorig + raydir * distance) - center;
+            return (MathF.Abs(i.X) <= 0.5f) && (MathF.Abs(i.Y) <= 0.5f) && (MathF.Abs(i.Z) <= 0.5f);
+        }
+
+        private void spawnParticle(Vector3 pos, float radius, Color color) {
+            if(User32Methods.GetKeyState(VirtualKey.T).IsPressed)
+                particles.Add(new Particle(pos, radius, (uint)color.ToRgba())); 
+        }
+        
         private readonly Stopwatch fpstimer = Stopwatch.StartNew();
         private long fps;
         private int cfps = 1;
@@ -154,7 +201,10 @@ namespace SurviveCore {
             dx.Context.Rasterizer.State = Settings.Instance.Wireframe ? wireframerenderstate : defaultrenderstate;
             worldrenderer.Draw(dx.Context, camera);
             dx.Context.Rasterizer.State = defaultrenderstate;
-
+            
+            if(particles.Count > 0)
+                particlerenderer.Render(dx.Context, particles.ToArray(), camera);
+            
             gui.Begin(input);
             if(input.MouseCaptured) {
                 gui.Text(new Point(5,5), "Block: " + TextFormat.LightPink + inventory[slot].Name, size:30);
@@ -203,6 +253,7 @@ namespace SurviveCore {
             dx.Dispose();
             defaultrenderstate.Dispose();
             wireframerenderstate.Dispose();
+            particlerenderer.Dispose();
             world.Dispose();
             worldrenderer.Dispose();
             gui.Dispose();

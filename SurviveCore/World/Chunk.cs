@@ -158,28 +158,28 @@ namespace SurviveCore.World {
         private Chunk FindChunk(ref int x, ref int y, ref int z) {
             if(x < 0) {
                 x += Size;
-                return neighbors[Direction.NegativeX]?.FindChunk(ref x, ref y, ref z);
+                return neighbors[(int)Direction.NegativeX]?.FindChunk(ref x, ref y, ref z);
             }
             if(y < 0) {
                 y += Size;
-                return neighbors[Direction.NegativeY]?.FindChunk(ref x, ref y, ref z);
+                return neighbors[(int)Direction.NegativeY]?.FindChunk(ref x, ref y, ref z);
             }
             if(z < 0) {
                 z += Size;
-                return neighbors[Direction.NegativeZ]?.FindChunk(ref x, ref y, ref z);
+                return neighbors[(int)Direction.NegativeZ]?.FindChunk(ref x, ref y, ref z);
             }
 
             if(x >= Size) {
                 x -= Size;
-                return neighbors[Direction.PositiveX]?.FindChunk(ref x, ref y, ref z);
+                return neighbors[(int)Direction.PositiveX]?.FindChunk(ref x, ref y, ref z);
             }
             if(y >= Size) {
                 y -= Size;
-                return neighbors[Direction.PositiveY]?.FindChunk(ref x, ref y, ref z);
+                return neighbors[(int)Direction.PositiveY]?.FindChunk(ref x, ref y, ref z);
             }
             if(z >= Size) {
                 z -= Size;
-                return neighbors[Direction.PositiveZ]?.FindChunk(ref x, ref y, ref z);
+                return neighbors[(int)Direction.PositiveZ]?.FindChunk(ref x, ref y, ref z);
             }
 
             return this;
@@ -193,17 +193,17 @@ namespace SurviveCore.World {
                 generated = true;
             Update(source);
             if(x == 0)
-                neighbors[Direction.NegativeX]?.Update(source);
+                neighbors[(int)Direction.NegativeX]?.Update(source);
             if(y == 0)
-                neighbors[Direction.NegativeY]?.Update(source);
+                neighbors[(int)Direction.NegativeY]?.Update(source);
             if(z == 0)
-                neighbors[Direction.NegativeZ]?.Update(source);
+                neighbors[(int)Direction.NegativeZ]?.Update(source);
             if(x == Size - 1)
-                neighbors[Direction.PositiveX]?.Update(source);
+                neighbors[(int)Direction.PositiveX]?.Update(source);
             if(y == Size - 1)
-                neighbors[Direction.PositiveY]?.Update(source);
+                neighbors[(int)Direction.PositiveY]?.Update(source);
             if(z == Size - 1)
-                neighbors[Direction.PositiveZ]?.Update(source);
+                neighbors[(int)Direction.PositiveZ]?.Update(source);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

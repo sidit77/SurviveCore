@@ -24,6 +24,7 @@ namespace AssetBuilder
             
             CompileShader("Assets/Shader/Gui.hlsl"  , "vs", "ps");
             CompileShader("Assets/Shader/World.hlsl", "vs", "ps");
+            CompileShader("Assets/Shader/Particle.hlsl", "vs", "ps", "gs");
 
             CompressTexture("Assets/Textures/Gui.png", Format.R8G8B8A8_UNorm);
             CompressTextureFolder("Assets/Textures/Blocks/", Format.BC1_UNorm);
@@ -67,7 +68,7 @@ namespace AssetBuilder
                     format.ToString().ToUpper(),
                     destdir, 
                     Path.Combine(srcdir, path)))
-                .WaitForExit();
+                ?.WaitForExit();
         }
 
         private static void CompressTextureFolder(string path, Format format)
@@ -82,7 +83,7 @@ namespace AssetBuilder
                     format.ToString().ToUpper(),
                     filename,
                     String.Join(" ", Directory.EnumerateFiles(Path.Combine(srcdir, path)))))
-                .WaitForExit();
+                ?.WaitForExit();
             Process
                 .Start(
                     Path.Combine(srcdir, "Tools/texconv.exe"),
@@ -90,7 +91,7 @@ namespace AssetBuilder
                     format.ToString().ToUpper(),
                     Path.GetDirectoryName(filename),
                     filename))
-                .WaitForExit();
+                ?.WaitForExit();
 
             using (StreamWriter fs = File.CreateText(Path.GetDirectoryName(Path.Combine(destdir, path)) + ".txt"))
             {

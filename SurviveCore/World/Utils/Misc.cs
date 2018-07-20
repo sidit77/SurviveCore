@@ -1,16 +1,36 @@
 ﻿using System;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 
 namespace SurviveCore.World.Utils {
     
-    public static class Direction {
-        public const int PositiveY = 1;
-        public const int NegativeY = 4;
-        public const int NegativeZ = 5;
-        public const int PositiveZ = 2;
-        public const int NegativeX = 3;
-        public const int PositiveX = 0;
+    public enum Direction {
+        PositiveY = 1,
+        NegativeY = 4,
+        NegativeZ = 5,
+        PositiveZ = 2,
+        NegativeX = 3,
+        PositiveX = 0
+    }
+
+    public static class DirectionUtils {
+        public static Vector3 GetDirection(this Direction d) {
+            switch (d) {
+                case Direction.PositiveY:
+                    return  Vector3.UnitY;
+                case Direction.NegativeY:
+                    return -Vector3.UnitY;
+                case Direction.NegativeZ:
+                    return -Vector3.UnitZ;
+                case Direction.PositiveZ:
+                    return  Vector3.UnitZ;
+                case Direction.NegativeX:
+                    return -Vector3.UnitX;
+                case Direction.PositiveX:
+                    return  Vector3.UnitX;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(d), d, null);
+            }
+        }
     }
     
 }
