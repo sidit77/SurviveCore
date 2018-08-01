@@ -25,6 +25,7 @@ namespace AssetBuilder
             CompileShader("Assets/Shader/Gui.hlsl"  , "vs", "ps");
             CompileShader("Assets/Shader/World.hlsl", "vs", "ps");
             CompileShader("Assets/Shader/Particle.hlsl", "vs", "ps", "gs");
+            CompileShader("Assets/Shader/Selection.hlsl", "vs", "ps");
 
             CompressTexture("Assets/Textures/Gui.png", Format.R8G8B8A8_UNorm);
             CompressTextureFolder("Assets/Textures/Blocks/", Format.BC1_UNorm);
@@ -40,15 +41,22 @@ namespace AssetBuilder
             {
                 CompilationResult code = ShaderBytecode.CompileFromFile(Path.Combine(srcdir, src), shadertype.ToUpper(), shadertype.ToLower() + "_5_0");
 
-                if (code.HasErrors){
-                    Console.WriteLine(code.Message);
-                    continue;
-                }
+                try {
+                    if (code.HasErrors){
+                        Console.WriteLine(code.Message);
+                        continue;
+                    }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(destdir, src)));
-                using (FileStream fs = File.Create(Path.Combine(destdir, Path.GetDirectoryName(src), Path.GetFileNameWithoutExtension(src) + "." + shadertype.ToLower() + ".fxo"))){
-                    code.Bytecode.Save(fs);
+                    Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(destdir, src)));
+                    using (FileStream fs = File.Create(Path.Combine(destdir, Path.GetDirectoryName(src), Path.GetFileNameWithoutExtension(src) + "." + shadertype.ToLower() + ".fxo"))){
+                        code.Bytecode.Save(fs);
+                    }
+                }catch (Exception e) {
+                    Console.WriteLine(e);
+                    Console.WriteLine(code.Message);
+                    throw;
                 }
+                
             }
             Console.WriteLine("Done");
         }

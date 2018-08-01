@@ -31,6 +31,7 @@ namespace SurviveCore {
         private WorldSave savegame;
         private GuiRenderer gui;
         private ParticleRenderer particlerenderer;
+        private SelectionRenderer selectionrenderer;
         
         protected override void OnCreate(ref CreateWindowPacket packet) {
             base.OnCreate(ref packet);
@@ -47,11 +48,12 @@ namespace SurviveCore {
             
             worldrenderer = new WorldRenderer(dx.Device);
             particlerenderer = new ParticleRenderer(dx.Device);
+            selectionrenderer = new SelectionRenderer(dx.Device);
             savegame = new WorldSave("./Assets/World.db");
             world = new BlockWorld(worldrenderer, savegame);
             physics = new PhysicsWorld(world);
             savegame.GetPlayerData("default", out Vector3 pos, out Quaternion rot);
-            camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.1f, 620.0f) {
+            camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.3f, 620.0f) {
                 Position = pos,
                 Rotation = rot
             };
@@ -66,6 +68,10 @@ namespace SurviveCore {
 
         private float veloctiy;
 
+        private bool blockFocused = false;
+        private Vector3 focusedBlock;
+        private Vector3 focusedBlockNormal;
+        
         public void Update(InputManager.InputState input) {
             if (input.IsForeground) {
                 if(input.IsKeyDown(VirtualKey.F1))
@@ -86,7 +92,7 @@ namespace SurviveCore {
                 //TODO Add a acceleration phase
                 
                 if(Settings.Instance.Physics) {
-                    //TODO fix the stuttering
+                    //TODO fix the stuttering (Mouse precision?)
                     movement *= input.IsKey(VirtualKey.SHIFT) ? 0.06f : 0.03f;
                     veloctiy -= 0.0010f;
                     if (physics.IsGrounded(camera.Position))
@@ -101,6 +107,8 @@ namespace SurviveCore {
                     movement *= input.IsKey(VirtualKey.CONTROL) ? 0.3f : 0.06f;
                     camera.Position += movement;
                 }
+
+                blockFocused = FindIntersection(out focusedBlock, out focusedBlockNormal);
                 if (input.MouseCaptured) {
                     var mpos = input.DeltaMousePosition;
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (1f / 600) * mpos.X);
@@ -110,15 +118,15 @@ namespace SurviveCore {
                     camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right, MathHelper.Clamp((1f / 600) * mpos.Y + angle, anglediff, MathF.PI - anglediff) - angle);
                     
                     if (input.IsKeyDown(VirtualKey.LBUTTON) || input.IsKeyDown(VirtualKey.Q)) {
-                        if (FindIntersection(out Vector3 intersection, out _) && world.SetBlock(intersection, Blocks.Air)) {
+                        if (blockFocused && world.SetBlock(focusedBlock, Blocks.Air)) {
                         }
                     }
                     if (input.IsKeyDown(VirtualKey.RBUTTON) || input.IsKeyDown(VirtualKey.E)) {
-                        if (FindIntersection(out Vector3 intersection, out Vector3 normal) 
-                            && world.GetBlock(intersection + normal) == Blocks.Air 
-                            && world.SetBlock(intersection + normal, inventory[slot]) 
+                        if (blockFocused 
+                            && world.GetBlock(focusedBlock + focusedBlockNormal) == Blocks.Air 
+                            && world.SetBlock(focusedBlock + focusedBlockNormal, inventory[slot]) 
                             && !physics.CanMoveTo(camera.Position)) {
-                            world.SetBlock(intersection + normal, Blocks.Air);
+                            world.SetBlock(focusedBlock + focusedBlockNormal, Blocks.Air);
                         }
                     }
                 }
@@ -210,6 +218,9 @@ namespace SurviveCore {
             
             if(particles.Count > 0)
                 particlerenderer.Render(dx.Context, particles.ToArray(), camera);
+
+            if (blockFocused)
+                selectionrenderer.Render(dx.Context, focusedBlock, focusedBlockNormal, camera);
             
             gui.Begin(input);
             if(input.MouseCaptured) {
@@ -263,6 +274,7 @@ namespace SurviveCore {
             world.Dispose();
             worldrenderer.Dispose();
             gui.Dispose();
+            selectionrenderer.Dispose();
             savegame.SavePlayerData("default", camera.Position, camera.Rotation);
             savegame.Dispose();
         }
