@@ -103,6 +103,7 @@ namespace SurviveCore {
             context.OutputMerger.BlendState = blendstate;
             context.OutputMerger.DepthStencilState = depthstate;
             context.MapAndUpdate(vertices, instancebuffer);
+            //TODO Create a shared camera constant buffer
             context.MapAndUpdate(ref camera.CameraMatrix, constantbuffer);
             context.Draw(4,0);
             context.OutputMerger.BlendState = null;
