@@ -19,7 +19,9 @@ PsInput VS(VsInput input, uint VertexID : SV_VertexID) {
 }
 
 float4 PS(PsInput input) : SV_TARGET {
-    if(input.Uv.x > 0.01 && input.Uv.x < 0.99 && input.Uv.y > 0.01 && input.Uv.y < 0.99)
+    float2 cuv = input.Uv * 2 - 1;
+    float width = 1 - (0.01 / (input.Position.z / input.Position.w));
+    if(abs(cuv.x) < width && abs(cuv.y) < width)
         discard;  
     return float4(0,0,0,1);
 }
