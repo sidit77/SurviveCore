@@ -130,10 +130,43 @@ namespace SurviveCore {
                         }
                     }
                 }
+                
             }
                
             slot = Math.Abs(input.MouseWheel / 120) % inventory.Length;
             
+        }
+
+        private unsafe bool GetHitNormal(Vector3 pos, out Vector3 hitnormal) {
+            hitnormal = Vector3.Zero;
+            Vector3 forward = camera.Forward;
+            Vector3 position = camera.Position;
+            for(int i = 0; i < 6; i++) {
+                if (!RayFaceIntersection(&forward.X, &position.X, &pos.X, i, out float d)) continue;
+                if(User32Methods.GetKeyState(VirtualKey.T).IsPressed)
+                    spawnParticle(position + forward * d, 0.04f, Color.Red);
+                fixed(float* n = &hitnormal.X)
+                    n[i % 3] = i < 3 ? -1 : 1;
+                return true;
+            }
+            return false;
+        }
+        
+        private unsafe bool RayFaceIntersection(float* r, float* p, float* d, int i, out float distance) {
+            distance = float.PositiveInfinity;
+            int normal = i < 3 ? -1 : 1;
+            int i0 = (i + 0) % 3;
+            int i1 = (i + 1) % 3;
+            int i2 = (i + 2) % 3;
+            float ndotdir = r[i0] * normal;
+            if (-ndotdir < 0.0001f)
+                return false;
+            float center = d[i0] + normal * 0.5f;
+            distance = -(normal * p[i0] - center * normal) / ndotdir;
+            if (distance < 0)
+                return false;
+            return MathF.Abs(p[i1] + r[i1] * distance - d[i1]) <= 0.5f
+                && MathF.Abs(p[i2] + r[i2] * distance - d[i2]) <= 0.5f;
         }
         
         private bool FindIntersection(out Vector3 pos, out Vector3 normal) {
@@ -156,7 +189,8 @@ namespace SurviveCore {
             pos = Vector3.Zero;
             Vector3 forward = camera.Forward;
             for(float f = 0; f < 7; f += 0.25f) {
-                spawnParticle(camera.Position + forward * f, 0.03f, Color.Aquamarine);
+                if(User32Methods.GetKeyState(VirtualKey.T).IsPressed)
+                    spawnParticle(camera.Position + forward * f, 0.03f, Color.Aquamarine);
                 if (world.GetBlock(camera.Position + forward * f) == Blocks.Air) continue;
                 pos = camera.Position + forward * f;
                 return true;
@@ -164,36 +198,10 @@ namespace SurviveCore {
             return false;
         }
         
-        private bool GetHitNormal(Vector3 pos, out Vector3 hitnormal) {
-            Vector3 forward = camera.Forward;
-            for(int i = 0; i < 6; i++) {
-                hitnormal = ((Direction)i).GetDirection();
-                if (!RayFaceIntersection(forward, camera.Position, hitnormal, pos, out float d)) continue;
-                spawnParticle(camera.Position + forward * d, 0.04f, Color.Red);
-                return true;
-            }
-            hitnormal = Vector3.Zero;
-            return false;
-        }
-
         private readonly List<Particle> particles = new List<Particle>();
         
-        private bool RayFaceIntersection(Vector3 raydir, Vector3 rayorig, Vector3 normal, Vector3 cubepos, out float distance) {
-            distance = float.PositiveInfinity;
-            float ndotdir = Vector3.Dot(raydir, normal);
-            if (-ndotdir < 0.0001f)
-                return false;
-            Vector3 center = cubepos + normal * 0.5f;
-            distance = -(Vector3.Dot(normal, rayorig) - Vector3.Dot(center, normal)) / ndotdir;
-            if (distance < 0)
-                return false;
-            Vector3 i = (rayorig + raydir * distance) - center;
-            return (MathF.Abs(i.X) <= 0.5f) && (MathF.Abs(i.Y) <= 0.5f) && (MathF.Abs(i.Z) <= 0.5f);
-        }
-
         private void spawnParticle(Vector3 pos, float radius, Color color) {
-            if(User32Methods.GetKeyState(VirtualKey.T).IsPressed)
-                particles.Add(new Particle(pos, radius, (uint)color.ToRgba())); 
+            particles.Add(new Particle(pos, radius, (uint)color.ToRgba())); 
         }
         
         private readonly Stopwatch fpstimer = Stopwatch.StartNew();
