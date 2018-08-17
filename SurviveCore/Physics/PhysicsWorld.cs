@@ -32,7 +32,7 @@ namespace SurviveCore.Physics {
             while(z && !CanMoveToZ(pos, mov.Z))
                 z = Math.Abs(mov.Z /= 2) > pecision;
             
-            return pos + new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0); 
+            return new Vector3(x ? mov.X : 0, y ? mov.Y : 0, z ? mov.Z : 0); 
         }
         
         public bool CanMoveTo(Vector3 pos) {

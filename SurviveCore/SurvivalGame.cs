@@ -67,6 +67,7 @@ namespace SurviveCore {
         private int slot;
 
         private float veloctiy;
+        private Vector3 lastMovement;
 
         private bool blockFocused = false;
         private Vector3 focusedBlock;
@@ -89,23 +90,26 @@ namespace SurviveCore {
                     movement += camera.Right;
                 movement.Y = 0;
                 movement = movement.LengthSquared() > 0 ? Vector3.Normalize(movement) : Vector3.Zero;
-                //TODO Add a acceleration phase
+                //TODO Investigate the glitch up instead of jump problem
                 
                 if(Settings.Instance.Physics) {
                     //TODO fix the stuttering (Mouse precision?)
                     movement *= input.IsKey(VirtualKey.SHIFT) ? 0.06f : 0.03f;
                     veloctiy -= 0.0010f;
                     if (physics.IsGrounded(camera.Position))
-                        veloctiy = input.IsKeyDown(VirtualKey.SPACE) ? 0.05f : 0;
+                        veloctiy = input.IsKeyDown(VirtualKey.SPACE) ? 0.055f : 0;
+                    movement = Vector3.Lerp(lastMovement, movement, 0.05f);
                     movement.Y += veloctiy;
-                    camera.Position = physics.ClampToWorld(camera.Position, movement);
+                    movement = physics.ClampToWorld(camera.Position, movement);
+                    lastMovement = movement * new Vector3(1, 0, 1);
+                    camera.Position += movement;
                 }else {
                     if (input.IsKey(VirtualKey.SPACE))
                         movement += Vector3.UnitY;
                     if (input.IsKey(VirtualKey.SHIFT))
                         movement -= Vector3.UnitY;
                     movement *= input.IsKey(VirtualKey.CONTROL) ? 0.3f : 0.06f;
-                    camera.Position += movement;
+                    camera.Position += lastMovement = Vector3.Lerp(lastMovement, movement, 0.03f);
                 }
 
                 blockFocused = FindIntersection(out focusedBlock, out focusedBlockNormal);
