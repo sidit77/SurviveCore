@@ -34,7 +34,7 @@ namespace SurviveCore.World.Saving {
         public WorldSave(string path) {
             blockDatabase = new LiteDatabase(path);
 
-	        //blockDatabase.DropCollection("chunks");
+	        blockDatabase.DropCollection("chunks");
 	        
             savedchunks = blockDatabase.GetCollection<ChunkData>("chunks");
 	        settings = blockDatabase.GetCollection<Setting>("settings");
@@ -54,6 +54,7 @@ namespace SurviveCore.World.Saving {
             loadingtimer = new AverageTimer();
             compresstimer = new AverageTimer();
             generationtimer = new AverageTimer();
+
         }
 
 	    public void FillChunk(Chunk c) {
@@ -63,12 +64,18 @@ namespace SurviveCore.World.Saving {
 			if (data == null) {
 				generationtimer.Start();
 			    generator.FillChunk(c);
+				c.IncrementGenerationLevel();
 				generationtimer.Stop();
 			}else {
 			    ChunkSerializer.Deserialize(c, data);
 			}
 	    }
 
+	    public void DecorateChunk(Chunk c) {
+		    c.IncrementGenerationLevel();
+		    generator.DecorateChunk(c);
+	    }
+	    
 	    public void QueueChunkForSaving(Chunk c) {
 		    if(c.IsDirty || c.IsGenerated) {
 			    compresstimer.Start();
@@ -106,6 +113,7 @@ namespace SurviveCore.World.Saving {
 	    [SuppressMessage("ReSharper", "UnusedMember.Local")]
 	    private class ChunkData {
 		    public ChunkLocation Id { get; set; }
+	        public int GenerationLevel {get; set;}
 		    public byte[] Meta { get; set; }
 		    public byte[] Blocks { get; set; }
 
@@ -113,10 +121,11 @@ namespace SurviveCore.World.Saving {
 			    
 		    }
 		    
-		    public ChunkData(ChunkLocation id, byte[] meta, byte[] blocks) {
+		    public ChunkData(ChunkLocation id, int level, byte[] meta, byte[] blocks) {
 			    Id = id;
 			    Meta = meta;
 			    Blocks = blocks;
+			    GenerationLevel = level;
 		    }
 	    }
 
@@ -173,10 +182,11 @@ namespace SurviveCore.World.Saving {
 				Marshal.Copy((IntPtr)start,blocks,0,size);
 			    
 			    
-			    return new ChunkData(c.Location, meta, blocks);
+			    return new ChunkData(c.Location, c.GenerationLevel, meta, blocks);
 		    }
 
 		    public static unsafe void Deserialize(Chunk c, ChunkData cd) {
+			    c.SetGenerationLevel(cd.GenerationLevel);
 			    //TODO combine both arrays and make some size checks
 			    fixed(byte* bstart = cd.Blocks)
 			    fixed(byte* mstart = cd.Meta) {
@@ -196,7 +206,7 @@ namespace SurviveCore.World.Saving {
 								    mpointer += 2;
 								    mcounter += 2;
 							    }
-							    c.SetBlockDirect(x, y, z, Block.GetBlock(*bpointer), *mpointer, UpdateSource.Loading);
+							    c.SetBlockDirect(x, y, z, Block.GetBlock(*bpointer), *mpointer, UpdateSource.Generation);
 							    (*bcounter)--;
 							    (*mcounter)--;
 						    }

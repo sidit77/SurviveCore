@@ -133,6 +133,9 @@ namespace SurviveCore {
                             world.SetBlock(focusedBlock + focusedBlockNormal, Blocks.Air);
                         }
                     }
+                    if (blockFocused && input.IsKeyDown(VirtualKey.MBUTTON)) {
+                        Console.WriteLine(world.GetChunk(ChunkLocation.FromPos(focusedBlock))?.GenerationLevel);
+                    }
                 }
                 
             }

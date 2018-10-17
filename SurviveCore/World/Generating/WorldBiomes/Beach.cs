@@ -7,11 +7,11 @@ namespace SurviveCore.World.Generating.WorldBiomes {
         public override void FillChunk(Chunk c, Random r, int x, int z, float height) {
             for (int y = 0; y < Chunk.Size; y++) {
                 if(c.Location.WY + y <= height - 4)
-                    c.SetBlockDirect(x, y, z, Blocks.Stone);
+                    c.SetBlockDirect(x, y, z, Blocks.Stone, UpdateSource.Generation);
                 else if(c.Location.WY + y <= height)
-                    c.SetBlockDirect(x, y, z, Blocks.Sand);
+                    c.SetBlockDirect(x, y, z, Blocks.Sand, UpdateSource.Generation);
                 else if(c.Location.WY + y <= AdvancedWorldGenerator.SeaLevel)
-                    c.SetBlockDirect(x, y, z, Blocks.Water);
+                    c.SetBlockDirect(x, y, z, Blocks.Water, UpdateSource.Generation);
             }
         }
     }

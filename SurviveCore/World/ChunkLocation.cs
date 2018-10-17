@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http.Headers;
 using System.Numerics;
 using SurviveCore.World.Utils;
 
@@ -41,6 +42,10 @@ namespace SurviveCore.World {
                 case Direction.PositiveZ: return new ChunkLocation(x    , y    , z + 1);
                 default: throw new ArgumentException(direction + " isnt a direction");
             }
+        }
+
+        public ChunkLocation GetOffset(int x, int y, int z) {
+            return new ChunkLocation(this.x + x, this.y + y, this.z + z);
         }
         
         public override bool Equals(object obj) {

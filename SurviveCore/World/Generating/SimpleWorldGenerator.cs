@@ -35,5 +35,6 @@ namespace SurviveCore.World.Generating {
                 }
             }
         }
+        public void DecorateChunk(Chunk c){}
     }
 }

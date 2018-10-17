@@ -22,12 +22,12 @@ namespace SurviveCore.World {
 
     public class BlockWorld : IDisposable {
 
-	    private const ThreadPriority LoadingThreadPriority = ThreadPriority.BelowNormal;
-	    private const int MaxLoadingThreads = 1;
-	    private const int MaxUpdateTime = 5;
-        private const int Height = 8;
-        private const int LoadDistance = 15;
-	    private const int UnloadDistance = LoadDistance + 1;
+	    public const ThreadPriority LoadingThreadPriority = ThreadPriority.BelowNormal;
+	    public const int MaxLoadingThreads = 1;
+	    public const int MaxUpdateTime = 5;
+        public const int Height = 8;
+        public const int LoadDistance = 15;
+	    public const int UnloadDistance = LoadDistance + 1;
 
         private int centerX;
 	    private int centerZ;
@@ -42,6 +42,7 @@ namespace SurviveCore.World {
         private readonly Stack<Chunk> chunkUnloadStack;
 	    private readonly ConcurrentHashSet<ChunkLocation> currentlyLoading;
 	    private readonly ConcurrentQueue<Chunk> loadedChunks;
+	    private readonly Queue<ChunkLocation> decorationQueue;
 
 	    private readonly Stopwatch updateTimer;
 	    private int averageChunkUpdates;
@@ -59,6 +60,7 @@ namespace SurviveCore.World {
             chunkUnloadStack = new Stack<Chunk>();
 	        currentlyLoading = new ConcurrentHashSet<ChunkLocation>();
 	        loadedChunks = new ConcurrentQueue<Chunk>();
+	        decorationQueue = new Queue<ChunkLocation>();
 	        
             mesher = new ChunkMesher();
 	        updateTimer = new Stopwatch();
@@ -184,15 +186,33 @@ namespace SurviveCore.World {
         private void LoadChunks() {
 	        while(!loadedChunks.IsEmpty) {
 		        loadedChunks.TryDequeue(out Chunk chunk);
+		        
 		        for (int d = 0; d < 6; d++)
-			        chunk.SetNeighbor(d, GetChunk(chunk.Location.GetAdjecent((Direction)d)));
-		        chunk.SetMeshUpdates(true);
+			        chunk.SetNeighbor(d, GetChunk(chunk.Location.GetAdjecent((Direction) d)));
 		        chunkMap.Add(chunk.Location, chunk);
 		        currentlyLoading.TryRemove(chunk.Location);
+		        chunk.SetMeshUpdates(true);
+		        chunk.Update(UpdateSource.Generation);
+		        
+		        for(int x = -Chunk.FinalGenerationLevel; x <= Chunk.FinalGenerationLevel; x++)
+		        for(int y = -Chunk.FinalGenerationLevel; y <= Chunk.FinalGenerationLevel; y++)
+		        for(int z = -Chunk.FinalGenerationLevel; z <= Chunk.FinalGenerationLevel; z++) {
+			        ChunkLocation loc = chunk.Location.GetOffset(x, y, z);
+			        if((!GetChunk(loc)?.IsGenerationFinal ?? false) && !decorationQueue.Contains(loc))
+				        decorationQueue.Enqueue(loc);
+		        }
+		        
+	        }
+
+	        while (decorationQueue.Count > 0) {
+		        ChunkLocation loc = decorationQueue.Dequeue();
+		        Chunk c = GetChunk(loc);
+		        if(c?.CanBeDecorated() ?? false)
+					save.DecorateChunk(c);
 	        }
 	        
         }
-
+	    
         private void UnloadChunks(bool final) {
             while (chunkUnloadStack.Count > 0) {
                 Chunk chunk = chunkUnloadStack.Pop();
@@ -221,7 +241,7 @@ namespace SurviveCore.World {
 	        }
         }
 
-	    private Chunk GetChunk(ChunkLocation l) {
+	    public Chunk GetChunk(ChunkLocation l) {
 		    return chunkMap.TryGetValue(l, out Chunk c) ? c : null;
 	    }
 	    

@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using SurviveCore.World.Rendering;
 using SurviveCore.World.Utils;
 
@@ -6,6 +7,8 @@ namespace SurviveCore.World {
 
     public class Chunk {
 
+        //TODO move to world generator
+        public const int FinalGenerationLevel = 1;
         public const int BPC = 5;
         public const int Size = 1 << BPC;
         public static readonly Block Border = new Block("Border", "", true, true);
@@ -21,14 +24,15 @@ namespace SurviveCore.World {
         private ChunkLocation location;
         private bool dirty;
         private bool generated;
-        private int renderedblocks;
         private bool meshready;
+        private int renderedblocks;
         private readonly Chunk[] neighbors;
         private readonly Block[] blocks;
         private readonly byte[] metadata;
         private ChunkRenderer renderer;
         private BlockWorld world;
-
+        private int genlevel;
+        
         private Chunk(){
             neighbors = new Chunk[]{null, null, null, null, null, null};
             blocks = new Block[Size * Size * Size];
@@ -45,21 +49,41 @@ namespace SurviveCore.World {
             }
         }
 
-        private void Update(UpdateSource source) {
-            if(!meshready)
+        public bool CanBeDecorated() {
+            if (IsGenerationFinal)
+                return false;
+            
+            for(int x = -genlevel - 1; x <= genlevel + 1; x++)
+            for(int y = -genlevel - 1; y <= genlevel + 1; y++)
+            for(int z = -genlevel - 1; z <= genlevel + 1; z++)
+                if(!CheckChunkAccess(x << BPC, y << BPC, z << BPC))
+                    return false;
+            return true;
+        }
+
+        public void Update(UpdateSource source) {
+            if(!meshready) //TODO investigate generation only after decoration
                 return;
             switch (source) {
                 case UpdateSource.Modification:
                     world.QueueChunkForRemesh(this, 0);
                     break;
                 case UpdateSource.Generation:
-                case UpdateSource.Loading:
                     world.QueueChunkForRemesh(this, 1);
                     break;
                 case UpdateSource.Neighbor:
                     world.QueueChunkForRemesh(this, 2);
                     break;
             }
+        }
+
+        public void IncrementGenerationLevel() {
+            if(genlevel < FinalGenerationLevel)
+                genlevel++;
+        }
+
+        public void SetGenerationLevel(int level) {
+            genlevel = level;
         }
 
         public void SetMeshUpdates(bool enabled) {
@@ -107,8 +131,9 @@ namespace SurviveCore.World {
             location = l;
             this.world = world;
             renderedblocks = 0;
-            meshready = false;
+            genlevel = -1;
             generated = false;
+            meshready = false;
             dirty = false;
             for (int i = 0; i < blocks.Length; i++)
                 blocks[i] = Blocks.Air;
@@ -154,6 +179,13 @@ namespace SurviveCore.World {
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool CheckChunkAccess(int x, int y, int z) {
+            if (y < 0 || (y >> BPC) > BlockWorld.Height)
+                return true;
+            return FindChunk(ref x, ref y, ref z) != null;
+        }
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Chunk FindChunk(ref int x, ref int y, ref int z) {
             if(x < 0) {
@@ -234,6 +266,8 @@ namespace SurviveCore.World {
         public ChunkLocation Location => location;
         public bool IsDirty => dirty;
         public bool IsGenerated => generated;
+        public bool IsGenerationFinal => genlevel == FinalGenerationLevel;
+        public int GenerationLevel => genlevel;
 
         public override bool Equals(object obj) {
             return obj is Chunk o && o.location.Equals(location);
@@ -247,7 +281,6 @@ namespace SurviveCore.World {
     public enum UpdateSource {
         Modification,
         Generation,
-        Loading,
         Neighbor
         //TODO Add a AO remesh source to solve outdated ao-aocases
     }

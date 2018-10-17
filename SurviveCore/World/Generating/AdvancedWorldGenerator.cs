@@ -144,6 +144,39 @@ namespace SurviveCore.World.Generating {
             
         }
 
+        public void DecorateChunk(Chunk c) {
+            ChunkLocation l = c.Location;
+            
+            
+            ChunkInfo ci = GenerateChunkInfo(l.X, l.Z);
+            
+            Random r = new Random(c.Location.GetHashCode());
+            
+            for(int x = 0; x < Chunk.Size; x++) {
+                for(int z = 0; z < Chunk.Size; z++) {
+                    int chunkheight = (int)(ci.GetHeight(x, z) - l.WY);
+                    if (ci.GetBiome(x, z) is PlainsBiome && chunkheight > 0 && chunkheight < Chunk.Size) {
+                        if (r.NextDouble() < 0.02 * ci.GetHumidity(x,z)) {
+                            GenerateTree(c,x,chunkheight,z, r);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void GenerateTree(Chunk c, int x, int y, int z, Random r) {
+            int height = r.Next(5, 8);
+            for (int i = 0; i < height; i++) {
+                c.SetBlock(x, y + i, z, Blocks.Wood, UpdateSource.Generation);
+            }
+            for(int wx = -4; wx <= 4; wx++)
+            for(int wy = -4; wy <= 4; wy++)
+            for(int wz = -4; wz <= 4; wz++)
+                if (wx * wx + wy * wy + wz * wz < 3 * 4 && c.GetBlock(x + wx, y + height + wy, z + wz) == Blocks.Air)
+                    c.SetBlock(x + wx, y + height + wy, z + wz, Blocks.Leaves, UpdateSource.Generation);
+                    
+        }
+        
         private ConcurrentDictionary<(int,int), ChunkInfo> cicache = new ConcurrentDictionary<(int, int), ChunkInfo>();
         
         private ChunkInfo GenerateChunkInfo(int cx, int cz) {
