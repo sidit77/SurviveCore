@@ -26,7 +26,7 @@ namespace SurviveCore.World {
 	    public const int MaxLoadingThreads = 1;
 	    public const int MaxUpdateTime = 5;
         public const int Height = 8;
-        public const int LoadDistance = 15;
+        public const int LoadDistance = 16;
 	    public const int UnloadDistance = LoadDistance + 1;
 
         private int centerX;
@@ -192,7 +192,6 @@ namespace SurviveCore.World {
 		        chunkMap.Add(chunk.Location, chunk);
 		        currentlyLoading.TryRemove(chunk.Location);
 		        chunk.SetMeshUpdates(true);
-		        chunk.Update(UpdateSource.Generation);
 		        
 		        for(int x = -Chunk.FinalGenerationLevel; x <= Chunk.FinalGenerationLevel; x++)
 		        for(int y = -Chunk.FinalGenerationLevel; y <= Chunk.FinalGenerationLevel; y++)

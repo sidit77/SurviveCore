@@ -72,8 +72,8 @@ namespace SurviveCore.World.Saving {
 	    }
 
 	    public void DecorateChunk(Chunk c) {
-		    c.IncrementGenerationLevel();
 		    generator.DecorateChunk(c);
+		    c.IncrementGenerationLevel();
 	    }
 	    
 	    public void QueueChunkForSaving(Chunk c) {

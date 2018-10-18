@@ -62,7 +62,7 @@ namespace SurviveCore.World {
         }
 
         public void Update(UpdateSource source) {
-            if(!meshready) //TODO investigate generation only after decoration
+            if(!meshready || genlevel < FinalGenerationLevel)
                 return;
             switch (source) {
                 case UpdateSource.Modification:
@@ -78,16 +78,20 @@ namespace SurviveCore.World {
         }
 
         public void IncrementGenerationLevel() {
-            if(genlevel < FinalGenerationLevel)
-                genlevel++;
+            if(genlevel == FinalGenerationLevel)
+                return;
+            genlevel++;
+            Update(UpdateSource.Generation);
         }
 
         public void SetGenerationLevel(int level) {
             genlevel = level;
+            Update(UpdateSource.Generation);
         }
 
         public void SetMeshUpdates(bool enabled) {
             meshready = enabled;
+            Update(UpdateSource.Generation);
         }
         
         public bool RegenerateMesh(ChunkMesher mesher) {
