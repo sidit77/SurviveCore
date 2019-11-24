@@ -10,8 +10,8 @@
     <OutputPath>..\SurviveCore\bin\Debug\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="SharpDX.D3DCompiler" Version="4.2.0-ci284" />
-    <PackageReference Include="SharpDX.DXGI" Version="4.2.0-ci284" />
+    <PackageReference Include="SharpDX.D3DCompiler" Version="4.2.0" />
+    <PackageReference Include="SharpDX.DXGI" Version="4.2.0" />
     <PackageReference Include="SharpFontStandard" Version="4.0.1" />
   </ItemGroup>
   <ItemGroup>

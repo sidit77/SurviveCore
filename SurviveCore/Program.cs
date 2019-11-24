@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Threading;
-using LiteDB;
 using SurviveCore.DirectX;
-using SurviveCore.World;
 using WinApi.Desktop;
 using WinApi.User32;
 using WinApi.Windows;
@@ -19,15 +16,6 @@ namespace SurviveCore {
         [STAThread]
         private static void Main(string[] args) {
 
-            BsonMapper.Global.RegisterType(
-                cl => new BsonDocument(new Dictionary<string, BsonValue>{
-                    ["X"] = cl.X,
-                    ["Y"] = cl.Y,
-                    ["Z"] = cl.Z,
-                }),
-                bd => new ChunkLocation(bd.AsDocument["X"].AsInt32,bd.AsDocument["Y"].AsInt32,bd.AsDocument["Z"].AsInt32)
-            );
-            
             Console.WriteLine("Vector hardware acceleration: " + Vector.IsHardwareAccelerated);
             Thread.CurrentThread.Priority = ThreadPriority.Highest;
             try {
