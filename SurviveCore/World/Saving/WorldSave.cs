@@ -1,27 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq.Expressions;
+using System.Net.Http;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using DataTanker;
+using DataTanker.Settings;
 using LiteDB;
+using SurviveCore.DirectX;
 using SurviveCore.World.Generating;
+using SurviveCore.World.Rendering;
 using SurviveCore.World.Utils;
 
 namespace SurviveCore.World.Saving {
     
     public class WorldSave : IDisposable{
+
+	    private readonly IWorldGenerator generator;
+	    private readonly BlockWorld world;
         
-        private readonly IWorldGenerator generator;
-        
-        private readonly LiteDatabase blockDatabase;
-        private readonly LiteCollection<ChunkData> savedchunks;
-	    private readonly LiteCollection<Setting> settings;
-	    private readonly LiteCollection<PlayerState> players;
-	    
-	    private readonly Stack<ChunkData> savedata;
-        
-        private readonly AverageTimer savingtimer;
+	    private readonly IKeyValueStorage<ComparableKeyOf<ChunkLocation>, ValueOf<Chunk>> chunkStorage;
+	    private readonly IKeyValueStorage<KeyOf<string>, ValueOf<byte[]>> stateStorage;
+
+	    private readonly AverageTimer savingtimer;
         private readonly AverageTimer loadingtimer;
         private readonly AverageTimer compresstimer;
         private readonly AverageTimer generationtimer;
@@ -31,24 +35,28 @@ namespace SurviveCore.World.Saving {
         public long AverageCompressingTime => compresstimer.AverageTicks;
         public long AverageGeneratingTime => generationtimer.AverageTicks;
         
-        public WorldSave(string path) {
-            blockDatabase = new LiteDatabase(path);
+        public WorldSave(WorldRenderer renderer, string path)
+        {
+	        this.world = new BlockWorld(renderer, this);
+	        StorageFactory factory = new StorageFactory();
+	        chunkStorage = factory.CreateBPlusTreeStorage(new ChunkLocationSerializer(), 
+		        new ChunkSerializer(world), BPlusTreeStorageSettings.Default());
+	        stateStorage = factory.CreateRadixTreeByteArrayStorage<string>(RadixTreeStorageSettings.Default());
+	        if (Directory.Exists($"./Worlds/{path}/"))
+	        {
+		        stateStorage.OpenExisting($"./Worlds/{path}/");
+	        }
+	        else
+	        {
+		        Directory.CreateDirectory($"./Worlds/{path}/chunks/");
+		        stateStorage.CreateNew($"./Worlds/{path}/");
+		        stateStorage.Set("world/seed", new Random().Next().ToBytes());
+	        }
+	        chunkStorage.OpenOrCreate($"./Worlds/{path}/chunks/");
 
-	        blockDatabase.DropCollection("chunks");
-	        
-            savedchunks = blockDatabase.GetCollection<ChunkData>("chunks");
-	        settings = blockDatabase.GetCollection<Setting>("settings");
-	        players = blockDatabase.GetCollection<PlayerState>("players");
-	        
-            if(settings.FindById("seed") == null) {
-	            settings.Insert(new Setting("seed", new Random().Next()));
-            }
+	        Console.WriteLine("Loaded world {0} with seed {1}", path, stateStorage.Get("world/seed").ToStruct<int>());
 
-	        Console.WriteLine("Loaded world {0} with seed {1} and {2} chunks", Path.GetFileName(path), settings.FindById("seed").Value, savedchunks.Count());
-	        
-	        savedata = new Stack<ChunkData>();
-	        
-            generator = new AdvancedWorldGenerator(settings.FindById("seed").Value);//(int)Stopwatch.GetTimestamp()
+	        generator = new AdvancedWorldGenerator(stateStorage.Get("world/seed").ToStruct<int>());
             
             savingtimer = new AverageTimer();
             loadingtimer = new AverageTimer();
@@ -57,18 +65,20 @@ namespace SurviveCore.World.Saving {
 
         }
 
-	    public void FillChunk(Chunk c) {
+	    public Chunk GetChunk(ChunkLocation l) {
 			loadingtimer.Start();
-			ChunkData data = savedchunks.FindById(BsonMapper.Global.ToDocument(c.Location));
+			Chunk c = chunkStorage.Get(l);
 			loadingtimer.Stop();
-			if (data == null) {
-				generationtimer.Start();
-			    generator.FillChunk(c);
-				c.IncrementGenerationLevel();
-				generationtimer.Stop();
-			}else {
-			    ChunkSerializer.Deserialize(c, data);
-			}
+			
+			if (c != null)
+				return c;
+			
+			generationtimer.Start();
+			c = Chunk.CreateChunk(l, world);
+			generator.FillChunk(c);
+			c.IncrementGenerationLevel();
+			generationtimer.Stop();
+			return c;
 	    }
 
 	    public void DecorateChunk(Chunk c) {
@@ -76,124 +86,72 @@ namespace SurviveCore.World.Saving {
 		    c.IncrementGenerationLevel();
 	    }
 	    
-	    public void QueueChunkForSaving(Chunk c) {
-		    if(c.IsDirty || c.IsGenerated) {
-			    compresstimer.Start();
-			    ChunkData d = ChunkSerializer.Serialize(c);
-			    compresstimer.Stop();
-			    savedata.Push(d);
-		    }
-	    }
-
-	    public void Save() {
-		    if(savedata.Count > 0) {
+	    public void Save(Chunk c) {
+		    if (c.IsDirty || c.IsGenerated)
+		    {
 			    savingtimer.Start();
-			    savedchunks.Upsert(savedata);
-			    savingtimer.Stop(savedata.Count);
-			    savedata.Clear();
+			    chunkStorage.Set(c.Location, c);
+			    savingtimer.Stop();
 		    }
+
+		    c.CleanUp();
 	    }
 
+	    public BlockWorld GetWorld()
+	    {
+		    return world;
+	    }
+	    
 	    public void GetPlayerData(string name, out Vector3 pos, out Quaternion rot) {
-		    PlayerState ps = players.FindById(name);
-		    pos = ps?.Position ?? new Vector3(0, 50, 0);
-		    rot = ps?.Rotation ?? Quaternion.Identity;
+		    pos = stateStorage.Get($"player/{name}/position")?.ToStruct<Vector3>() ?? new Vector3(0, 50, 0);
+		    rot = stateStorage.Get($"player/{name}/rotation")?.ToStruct<Quaternion>() ?? Quaternion.Identity;
 	    }
 	    
 	    public void SavePlayerData(string name, Vector3 pos, Quaternion rot) {
-		    players.Upsert(new PlayerState(name, pos, rot));
+		    stateStorage.Set($"player/{name}/position", pos.ToBytes());
+		    stateStorage.Set($"player/{name}/rotation", rot.ToBytes());
 	    }
 	    
         public void Dispose() {
-            blockDatabase.Dispose();
+            chunkStorage.Dispose();
+            stateStorage.Dispose();
         }
-        
-        [SuppressMessage("ReSharper", "MemberCanBePrivate.Local")]
-	    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
-	    [SuppressMessage("ReSharper", "UnusedMember.Local")]
-	    private class ChunkData {
-		    public ChunkLocation Id { get; set; }
-	        public int GenerationLevel {get; set;}
-		    public byte[] Meta { get; set; }
-		    public byte[] Blocks { get; set; }
 
-		    public ChunkData() {
-			    
-		    }
-		    
-		    public ChunkData(ChunkLocation id, int level, byte[] meta, byte[] blocks) {
-			    Id = id;
-			    Meta = meta;
-			    Blocks = blocks;
-			    GenerationLevel = level;
-		    }
+        [StructLayout(LayoutKind.Sequential)]
+	    private struct ChunkHeader
+	    {
+		    public ChunkLocation location;
+		    public int genlevel;
+		    public int blength;
+		    public int mlength;
 	    }
 
-	    private static class ChunkSerializer {
+	    private class ChunkSerializer : ISerializer<Chunk>
+	    {
 
-		    public static unsafe ChunkData Serialize(Chunk c) {
-			    byte* start = stackalloc byte[Chunk.Size * Chunk.Size * Chunk.Size];
-				int size = 2;
-				byte* pointer = start + 0;
-				byte* counter = start + 1;
-				(*pointer) = c.GetMetaDataDirect(0, 0, 0);
-				(*counter) = 0;
-				for(int x = 0; x < Chunk.Size; x++) {
-				    for(int y = 0; y < Chunk.Size; y++) {
-					    for(int z = 0; z < Chunk.Size; z++) {
-						    byte b = c.GetMetaDataDirect(x, y, z);
-						    if(b == *pointer && *counter < 255) {
-							    (*counter)++;
-						    }else {
-							    counter += 2;
-							    pointer += 2;
-							    size += 2;
-							    (*counter) = 1;
-							    (*pointer) = b;
-						    }
-					    }
-				    }
-				}
-				byte[] meta = new byte[size];
-				Marshal.Copy((IntPtr)start,meta,0,size);
-				
-				size = 2;
-				pointer = start + 0;
-				counter = start + 1;
-				(*pointer) = (byte)c.GetBlockDirect(0, 0, 0).ID;
-				(*counter) = 0;
-				for(int x = 0; x < Chunk.Size; x++) {
-				    for(int y = 0; y < Chunk.Size; y++) {
-					    for(int z = 0; z < Chunk.Size; z++) {
-						    byte b = (byte)c.GetBlockDirect(x, y, z).ID;
-						    if(b == *pointer && *counter < 255) {
-							    (*counter)++;
-						    }else {
-							    counter += 2;
-							    pointer += 2;
-							    size += 2;
-							    (*counter) = 1;
-							    (*pointer) = b;
-						    }
-					    }
-				    }
-				}
-				byte[] blocks = new byte[size];
-				Marshal.Copy((IntPtr)start,blocks,0,size);
-			    
-			    
-			    return new ChunkData(c.Location, c.GenerationLevel, meta, blocks);
+		    private int hsize;
+		    
+		    private BlockWorld world;
+
+		    public ChunkSerializer(BlockWorld world) {
+			    this.world = world;
+			    hsize = Marshal.SizeOf<ChunkHeader>();
 		    }
-
-		    public static unsafe void Deserialize(Chunk c, ChunkData cd) {
-			    c.SetGenerationLevel(cd.GenerationLevel);
-			    //TODO combine both arrays and make some size checks
-			    fixed(byte* bstart = cd.Blocks)
-			    fixed(byte* mstart = cd.Meta) {
-				    byte* bpointer = bstart + 0;
-				    byte* bcounter = bstart + 1;
-				    byte* mpointer = mstart + 0;
-				    byte* mcounter = mstart + 1;
+		    
+		    public unsafe Chunk Deserialize(byte[] bytes) {
+			    if(bytes.Length < hsize)
+				    throw new Exception("Not big enough for header");
+			    fixed (byte* pstart = bytes)
+			    {
+				    ChunkHeader header = (ChunkHeader) Marshal.PtrToStructure((IntPtr) pstart, typeof(ChunkHeader));
+				    if(bytes.Length != hsize + header.blength + header.mlength)
+					    throw new Exception("Wrong length");
+				    Chunk c = Chunk.CreateChunk(header.location, world);
+				    c.SetGenerationLevel(header.genlevel);
+				    byte* bpointer = pstart + hsize + 0;
+				    byte* bcounter = pstart + hsize + 1;
+				    byte* mpointer = bpointer + header.blength;
+				    byte* mcounter = bcounter + header.blength;
 
 				    for(int x = 0; x < Chunk.Size; x++) {
 					    for(int y = 0; y < Chunk.Size; y++) {
@@ -212,66 +170,84 @@ namespace SurviveCore.World.Saving {
 						    }
 					    }
 				    }
+
+				    return c;
+
 			    }
-		    }
-		    
-	    }
-
-	    [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-	    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
-	    [SuppressMessage("ReSharper", "UnusedMember.Global")]
-	    public class Setting {
-		    [BsonId]
-		    public string Name { get; set; }
-		    public int Value { get; set; }
-
-		    public Setting() {
-		    }
-
-		    public Setting(string name, int value) {
-			    Name = name;
-			    Value = value;
-		    }
-	    }
-	    
-	    [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-	    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
-	    [SuppressMessage("ReSharper", "UnusedMember.Global")]
-	    public class PlayerState {
-		    [BsonId]
-		    public string Name { get; set; }
-		    public float px { get; set; }
-		    public float py { get; set; }
-		    public float pz { get; set; }
-		    
-		    public float rx { get; set; }
-		    public float ry { get; set; }
-		    public float rz { get; set; }
-		    public float rw { get; set; }
-
-		    [BsonIgnore]
-		    public Vector3 Position => new Vector3(px,py,pz);
-		    
-		    [BsonIgnore]
-		    public Quaternion Rotation => new Quaternion(rx,ry,rz,rw);
-		    
-		    public PlayerState() {
-		    }
-
-		    public PlayerState(string name, Vector3 position, Quaternion rotation) {
-			    Name = name;
 			    
-			    px = position.X;
-			    py = position.Y;
-			    pz = position.Z;
+		    }
+
+		    public unsafe byte[] Serialize(Chunk c) {
+			    byte* start = stackalloc byte[Chunk.Size * Chunk.Size * Chunk.Size * 2 + hsize];
+
+			    int bsize = 2;
+			    byte* pointer = start + hsize + 0;
+			    byte* counter = start + hsize + 1;
+			    (*pointer) = (byte)c.GetBlockDirect(0, 0, 0).ID;
+			    (*counter) = 0;
+			    for(int x = 0; x < Chunk.Size; x++) {
+				    for(int y = 0; y < Chunk.Size; y++) {
+					    for(int z = 0; z < Chunk.Size; z++) {
+						    byte b = (byte)c.GetBlockDirect(x, y, z).ID;
+						    if(b == *pointer && *counter < 255) {
+							    (*counter)++;
+						    }else {
+							    counter += 2;
+							    pointer += 2;
+							    bsize += 2;
+							    (*counter) = 1;
+							    (*pointer) = b;
+						    }
+					    }
+				    }
+			    }
 			    
-			    rx = rotation.X;
-			    ry = rotation.Y;
-			    rz = rotation.Z;
-			    rw = rotation.W;
+			    int msize = 2;
+			    pointer += 2;
+			    counter += 2;
+			    (*pointer) = c.GetMetaDataDirect(0, 0, 0);
+			    (*counter) = 0;
+			    for(int x = 0; x < Chunk.Size; x++) {
+				    for(int y = 0; y < Chunk.Size; y++) {
+					    for(int z = 0; z < Chunk.Size; z++) {
+						    byte b = c.GetMetaDataDirect(x, y, z);
+						    if(b == *pointer && *counter < 255) {
+							    (*counter)++;
+						    }else {
+							    counter += 2;
+							    pointer += 2;
+							    msize += 2;
+							    (*counter) = 1;
+							    (*pointer) = b;
+						    }
+					    }
+				    }
+			    }
+			    byte[] data = new byte[hsize + bsize + msize];
+			    ChunkHeader* header = (ChunkHeader*)start;
+			    header->location = c.Location;
+			    header->genlevel = c.GenerationLevel;
+			    header->blength = bsize;
+			    header->mlength = msize;
+			    Marshal.Copy((IntPtr)start,data,0,hsize + bsize + msize);
+
+			    return data;
 		    }
 	    }
-        
+
+	    private class ChunkLocationSerializer : ISerializer<ChunkLocation>
+	    {
+		    public ChunkLocation Deserialize(byte[] bytes)
+		    {
+			    return bytes.ToStruct<ChunkLocation>();
+		    }
+
+		    public byte[] Serialize(ChunkLocation obj)
+		    {
+			    return obj.ToBytes();
+		    }
+	    }
+
     }
     
 }

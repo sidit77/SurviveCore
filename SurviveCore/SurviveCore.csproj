@@ -16,6 +16,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="ConcurrentHashSet" Version="1.1.0" />
+    <PackageReference Include="DataTanker" Version="1.1.0-beta" />
     <PackageReference Include="LiteDB" Version="4.1.4" />
     <PackageReference Include="OptimizedPriorityQueue" Version="4.2.0" />
     <PackageReference Include="SharpDX" Version="4.2.0" />

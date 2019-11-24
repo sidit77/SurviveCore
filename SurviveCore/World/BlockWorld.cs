@@ -81,9 +81,7 @@ namespace SurviveCore.World {
 					        continue;
 
 				        currentlyLoading.Add(l);
-				        Chunk chunk = Chunk.CreateChunk(l, this);
-				        save.FillChunk(chunk);
-				        loadedChunks.Enqueue(chunk);
+				        loadedChunks.Enqueue(this.save.GetChunk(l));
 			        }
 		        }) {
 			        Name = "LoadingThread " + (i + 1),
@@ -91,7 +89,7 @@ namespace SurviveCore.World {
 		        }.Start();
 	        }
 
-	        UpdateChunkQueues();
+	        //UpdateChunkQueues();
         }
 
 	    public WorldRenderer Renderer => renderer;
@@ -218,10 +216,8 @@ namespace SurviveCore.World {
 	            if(!final && GetDistanceSquared(chunk.Location) < LoadDistance * LoadDistance)
 		            continue;
                 chunkMap.Remove(chunk.Location);
-	            save.QueueChunkForSaving(chunk);
-	            chunk.CleanUp();
+	            save.Save(chunk);
             }
-	    	save.Save();    
 	    }
         
         private void MeshChunks() {

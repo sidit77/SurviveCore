@@ -49,8 +49,8 @@ namespace SurviveCore {
             worldrenderer = new WorldRenderer(dx.Device);
             particlerenderer = new ParticleRenderer(dx.Device);
             selectionrenderer = new SelectionRenderer(dx.Device);
-            savegame = new WorldSave("./Assets/World.db");
-            world = new BlockWorld(worldrenderer, savegame);
+            savegame = new WorldSave(worldrenderer, "Test");
+            world = savegame.GetWorld();
             physics = new PhysicsWorld(world);
             savegame.GetPlayerData("default", out Vector3 pos, out Quaternion rot);
             camera = new Camera(75f * (float)Math.PI / 180,  (float) GetClientSize().Width / GetClientSize().Height, 0.3f, 620.0f) {

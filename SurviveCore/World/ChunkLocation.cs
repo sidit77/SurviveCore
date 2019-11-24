@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Net.Http.Headers;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using SurviveCore.World.Utils;
 
 namespace SurviveCore.World {
     
-    public struct ChunkLocation {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ChunkLocation : IComparable<ChunkLocation>, IComparable {
 
         private readonly int x, y, z;
 
@@ -60,6 +62,20 @@ namespace SurviveCore.World {
 
         public override string ToString() {
             return String.Format("[{0}|{1}|{2}]",x,y,z);
+        }
+
+        public int CompareTo(object obj)
+        {
+            return CompareTo((ChunkLocation) obj);
+        }
+
+        public int CompareTo(ChunkLocation other)
+        {
+            var xComparison = x.CompareTo(other.x);
+            if (xComparison != 0) return xComparison;
+            var yComparison = y.CompareTo(other.y);
+            if (yComparison != 0) return yComparison;
+            return z.CompareTo(other.z);
         }
     }
     

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Drawing;
 using System.Numerics;
+using System.Runtime.InteropServices;
+using DataTanker;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.Mathematics.Interop;
@@ -37,6 +39,32 @@ namespace SurviveCore.DirectX {
             DataBox db = context.MapSubresource(resource, 0, MapMode.WriteDiscard, MapFlags.None);
             Utilities.Write(db.DataPointer, ref data);
             context.UnmapSubresource(resource, 0);
+        }
+
+        public static unsafe byte[] ToBytes<T>(this T t) where T : struct
+        {
+            byte[] bytes = new byte[Marshal.SizeOf<T>()];
+            fixed (byte* b = bytes)
+            {
+                Marshal.StructureToPtr(t, (IntPtr)b,true);
+            }
+            return bytes;
+        }
+        
+        public static unsafe T ToStruct<T>(this byte[] bytes) where T : struct
+        {
+            fixed (byte* p = bytes)
+            {
+                return (T) Marshal.PtrToStructure((IntPtr) p, typeof(T));
+            }
+        }
+        
+        public static unsafe T ToStruct<T>(this ValueOf<byte[]> bytes) where T : struct
+        {
+            fixed (byte* p = bytes.Value)
+            {
+                return (T) Marshal.PtrToStructure((IntPtr) p, typeof(T));
+            }
         }
         
     }
