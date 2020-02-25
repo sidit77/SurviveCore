@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net.Http.Headers;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using SurviveCore.World.Utils;

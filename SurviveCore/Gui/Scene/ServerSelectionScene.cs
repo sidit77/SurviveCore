@@ -1,5 +1,6 @@
 using System.Drawing;
 using SurviveCore.DirectX;
+using SurviveCore.Gui.Scene.Multiplayer;
 
 namespace SurviveCore.Gui.Scene
 {
@@ -30,7 +31,7 @@ namespace SurviveCore.Gui.Scene
             gui.TextField(UIHelpers.GetCentered(w, h - 60, 600, 80), "serveradress", ref address);
             
             if (gui.Button(UIHelpers.GetCentered(w, h + 30, 600, 80), "Connect"))
-                client.CurrentScene = previous;
+                client.CurrentScene = new MultiplayerInGameScene(new MultiplayerSurvivalGame(client, address));
             
             if (gui.Button(new Rectangle(w - 250, h + 170, 500, 80), "Back"))
                 client.CurrentScene = previous;

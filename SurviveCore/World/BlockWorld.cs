@@ -215,6 +215,8 @@ namespace SurviveCore.World {
 	    }
         
         private void MeshChunks() {
+	        if(chunkMap.Count < 200)
+		        return;
 	        int i = 0;
             while (meshUpdateQueue.Count > 0) {
 	            if(chunkMap.TryGetValue(meshUpdateQueue.Dequeue(), out Chunk c))

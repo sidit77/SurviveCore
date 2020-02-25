@@ -9,11 +9,13 @@ namespace SurviveCoreServer
 {
     public class Server : IDisposable
     {
-        private const int port = 9090;
+        private const int port = 8888;
         private const int maxplayers = 10;
 
         private NetManager server;
         private Dictionary<NetPeer, Client> clients;
+        
+        
         
         public Server()
         {
@@ -27,7 +29,7 @@ namespace SurviveCoreServer
             listener.ConnectionRequestEvent += request =>
             {
                 if(server.PeersCount < maxplayers)
-                    request.AcceptIfKey("SomeConnectionKey");
+                    request.AcceptIfKey("SurvivalGameNetwork");
                 else
                     request.Reject();
             };
@@ -36,8 +38,8 @@ namespace SurviveCoreServer
             {
                 Console.WriteLine("We got connection: {0}", peer.EndPoint);
                 clients.Add(peer, new Client());            
-                writer.Put("Hello client!");                                // Put some string
-                peer.Send(writer, DeliveryMethod.ReliableOrdered);
+                //writer.Put("Hello client!");                                // Put some string
+                //peer.Send(writer, DeliveryMethod.ReliableOrdered);
             };
 
             listener.PeerDisconnectedEvent += (peer, info) =>
@@ -52,6 +54,8 @@ namespace SurviveCoreServer
                     case PacketType.PositionUpdate:
                         clients[peer].Position = new Vector3(reader.GetFloat(),reader.GetFloat(),reader.GetFloat());
                         break;
+                    case PacketType.ChunkRequest:
+                        
                     default:
                         Console.WriteLine("Received bad package!");
                         break;

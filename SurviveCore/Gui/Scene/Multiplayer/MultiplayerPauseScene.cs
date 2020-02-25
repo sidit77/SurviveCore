@@ -2,14 +2,14 @@ using System.Drawing;
 using SurviveCore.DirectX;
 using WinApi.User32;
 
-namespace SurviveCore.Gui.Scene
+namespace SurviveCore.Gui.Scene.Multiplayer
 {
-    public class PauseScene : GuiScene
+    public class MultiplayerPauseScene : GuiScene
     {
 
-        private InGameScene previous;
+        private MultiplayerInGameScene previous;
 
-        public PauseScene(InGameScene previous)
+        public MultiplayerPauseScene(MultiplayerInGameScene previous)
         {
             this.previous = previous;
         }
@@ -22,18 +22,18 @@ namespace SurviveCore.Gui.Scene
 
         public override void OnGui(InputManager.InputState input, GuiRenderer gui)
         {
-            int w = client.ScreenSize.Width  / 2;
+            int w = client.ScreenSize.Width / 2;
             int h = client.ScreenSize.Height / 2;
-            if(gui.Button(UIHelpers.GetCentered(w, h - 90, 500, 80), "Resume"))
+            if (gui.Button(UIHelpers.GetCentered(w, h - 90, 500, 80), "Resume"))
                 client.CurrentScene = previous;
-            if(gui.Button(UIHelpers.GetCentered(w, h      , 500, 80), "Settings"))
+            if (gui.Button(UIHelpers.GetCentered(w, h, 500, 80), "Settings"))
                 client.CurrentScene = new SettingsScene(this);
             if (gui.Button(UIHelpers.GetCentered(w, h + 90, 500, 80), "Main Menu"))
             {
                 previous.GetGame().Dispose();
                 client.CurrentScene = new MainMenuScene();
             }
-                
+
         }
 
         public override void OnUpdate(InputManager.InputState input)

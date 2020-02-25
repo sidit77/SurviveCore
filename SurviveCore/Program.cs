@@ -17,7 +17,7 @@ namespace SurviveCore {
         [STAThread]
         private static void Main(string[] args) {
 
-            /**
+            /*
             EventBasedNetListener listener = new EventBasedNetListener();
             NetManager client = new NetManager(listener);
             client.Start();
@@ -35,7 +35,7 @@ namespace SurviveCore {
             }
             
             client.Stop();
-            **/
+            */
             
             Console.WriteLine("Vector hardware acceleration: " + Vector.IsHardwareAccelerated);
             Thread.CurrentThread.Priority = ThreadPriority.Highest;
@@ -99,7 +99,7 @@ namespace SurviveCore {
                 MessageBoxHelpers.Show(ex.Message);
                 Console.WriteLine(ex);
             }
-            ///**/
+            /**/
         }
 
     }

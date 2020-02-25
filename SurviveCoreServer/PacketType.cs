@@ -2,6 +2,6 @@ namespace SurviveCoreServer
 {
     public enum PacketType
     {
-        PositionUpdate
+        PositionUpdate, ChunkRequest, Chunk
     }
 }
