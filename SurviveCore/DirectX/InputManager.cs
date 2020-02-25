@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using NetCoreEx.Geometry;
 using WinApi.User32;
 using WinApi.Windows.Controls;
@@ -19,6 +20,13 @@ namespace SurviveCore.DirectX {
             set => wheelpos += value;
         }
 
+        private event Action<char> InputEvent;
+
+        public void KeyEvent(char c)
+        {
+            InputEvent?.Invoke(c);
+        }
+        
         private Point AbsoluteMousePosition {
             get {
                 User32Methods.GetCursorPos(out Point currentmousepos);
@@ -44,10 +52,13 @@ namespace SurviveCore.DirectX {
             private Point lastmouseposition;
             private int lastwheelpos;
             private readonly KeyboardState lastkeystate;
+            private readonly StringBuilder textinput;
 
             public InputState(InputManager manager) {
                 this.manager = manager;
                 lastkeystate = new KeyboardState();
+                textinput = new StringBuilder();
+                manager.InputEvent += c => textinput.Append(c);
             }
             
             public int MouseWheel => manager.wheelpos;
@@ -99,18 +110,23 @@ namespace SurviveCore.DirectX {
             public bool IsKeyUp(VirtualKey key) {
                 return !User32Methods.GetKeyState(key).IsPressed && lastkeystate[key];
             }
+
+            public string GetText()
+            {
+                return textinput.ToString();
+            }
             
             public void Update() {
                 lastmouseposition = manager.AbsoluteMousePosition;
                 lastkeystate.Update();
                 lastwheelpos = manager.wheelpos;
+                textinput.Clear();
             }
             
         }
         
         private class KeyboardState {
-            private readonly byte[] keystates;
-
+            private byte[] keystates;
             public KeyboardState() {
                 keystates = new byte[256];
                 Update();
@@ -118,7 +134,8 @@ namespace SurviveCore.DirectX {
         
             public bool this[VirtualKey key] => (keystates[(int)key] & 128) != 0;
 
-            public unsafe void Update() {
+            public unsafe void Update()
+            {
                 fixed(byte* bp = keystates) {
                     User32Methods.GetKeyboardState((IntPtr)bp);
                 }

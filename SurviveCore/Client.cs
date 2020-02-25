@@ -16,7 +16,7 @@ namespace SurviveCore
         public RasterizerState DefaultRenderState { get; private set; }
         public RasterizerState WireframeRenderState { get; private set;}
         
-        public event Action OnDestroy; 
+        public event Action OnDispose; 
         public DirectXContext Dx { get; private set; }
 
         public GuiRenderer GuiRenderer { get; private set; }
@@ -98,7 +98,7 @@ namespace SurviveCore
         
         protected override void Dispose(bool d) {
             base.Dispose(d);
-            OnDestroy?.Invoke();
+            OnDispose?.Invoke();
             DefaultRenderState.Dispose();
             WireframeRenderState.Dispose();
             GuiRenderer.Dispose();

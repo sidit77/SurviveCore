@@ -42,6 +42,7 @@ namespace SurviveCore.Gui.Scene
 
             if (gui.Button(new Rectangle(w - 100, h + 400, 500, 80), "Back"))
                 client.CurrentScene = previous;
+            
         }
     }
 }

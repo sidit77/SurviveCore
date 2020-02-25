@@ -20,7 +20,7 @@ namespace SurviveCore.Gui.Scene
             if(gui.Button(UIHelpers.GetCentered(w, h - 040, 500, 80), "Singleplayer"))
                 client.CurrentScene = new InGameScene(new SurvivalGame(client));
             if(gui.Button(UIHelpers.GetCentered(w, h + 050, 500, 80), "Multiplayer"))
-                client.CurrentScene = new WorkInProgressScene(this);
+                client.CurrentScene = new ServerSelectionScene(this);
             if(gui.Button(UIHelpers.GetCentered(w, h + 140, 500, 80), "Settings"))
                 client.CurrentScene = new SettingsScene(this);
             if(gui.Button(UIHelpers.GetCentered(w, h + 230, 500, 80), "Quit Game"))

@@ -138,9 +138,10 @@ namespace SurviveCore.Gui.Text{
         public CharInfo GetCharInfo(char c) {
             if (charinfo.TryGetValue(c, out CharInfo ci))
                 return ci;
-            Console.WriteLine("The font doesnt contains to character: " + c + " (" + (int)c + ")");
             return charinfo['?'];
         }
+        
+        
         
         public int GetKerning((char,char) c) {
             return kerning.GetValueOrDefault(c,0);

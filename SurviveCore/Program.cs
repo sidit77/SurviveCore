@@ -68,6 +68,15 @@ namespace SurviveCore {
                                     inputManager.MouseWheelEvent = p.WheelDelta;
                                 }
                             }
+
+                            if (msg.Value == (uint) WM.CHAR)
+                            {
+                                unsafe {
+                                    WindowMessage wm = new WindowMessage(msg.Hwnd, msg.Value, msg.WParam, msg.LParam);
+                                    KeyCharPacket p = new KeyCharPacket(&wm);
+                                    inputManager.KeyEvent(p.Key);
+                                }
+                            }
                             User32Methods.TranslateMessage(ref msg);
                             User32Methods.DispatchMessage(ref msg);
                         } else {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Numerics;
@@ -38,6 +39,8 @@ namespace SurviveCore.Gui {
         private int gquadnr;
         private int tquadnr;
 
+        private string focused = "";
+        
         public GuiRenderer(Device device) {
             guitexture = DDSLoader.LoadDDS(device, "./Assets/Textures/Gui.dds");
             font = new Font(device, "./Assets/Gui/Fonts/Abel.fnt");
@@ -116,6 +119,8 @@ namespace SurviveCore.Gui {
             gquadnr = 0;
             tquadnr = 0;
             input = inputState;
+            if (inputState.IsKeyDown(VirtualKey.LBUTTON))
+                focused = "";
         }
         
         public void Text(Point p, string text, Origin origin = Origin.TopLeft, int size = 20) {
@@ -220,6 +225,9 @@ namespace SurviveCore.Gui {
                     offset.X -= s.Width / 2;
                     offset.Y -= s.Height / 2;
                     break;
+                case Origin.CenterLeft:
+                    offset.Y -= s.Height / 2;
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(origin), origin, null);
             }
@@ -281,6 +289,81 @@ namespace SurviveCore.Gui {
             return hovering && input.IsKeyDown(VirtualKey.LBUTTON);
         }
         
+        public void TextField(Rectangle rect, string name, ref string editstring) {
+            bool hovering = !input.MouseCaptured && rect.Contains(input.RelativeMousePosition);
+            if (hovering && input.IsKeyDown(VirtualKey.LBUTTON))
+                focused = name;
+            bool focus = focused.Equals(name);
+            int c = (focus ? Color.DarkGray : (hovering ? Color.LightGray : Color.White)).ToRgba();
+            long ticks = Stopwatch.GetTimestamp() % Stopwatch.Frequency;
+
+            if (focus){
+                foreach(char ch in input.GetText()) {
+                    if (ch == 13){
+                        focused = "";
+                        break;
+                    }
+                    if (ch == 8){
+                        if(editstring.Length > 0)
+                            editstring = editstring.Substring(0, editstring.Length - 1);
+                    }else{
+                        editstring = editstring + ch;
+                    }
+                }
+            }
+            
+            Text(new Point(rect.X + 25, rect.Y + rect.Height / 2), 
+                editstring + (focus && ticks < Stopwatch.Frequency / 2 ? "|" : ""), 
+                origin:Origin.CenterLeft, size:30);
+            
+            const int cs = 21;
+            
+            quads[gquadnr].Color = c;
+            quads[gquadnr].Pos = new Vector4(rect.X, rect.Y, cs, cs);
+            quads[gquadnr].Tex = new Vector4(0.0f,0.0f,0.5f,0.5f);
+            gquadnr++;
+            
+            quads[gquadnr].Color = c;
+            quads[gquadnr].Pos = new Vector4(rect.X + cs, rect.Y, rect.Width - 2 * cs, cs);
+            quads[gquadnr].Tex = new Vector4(0.5f,0.0f,0.0f,0.5f);
+            gquadnr++;
+            
+            quads[gquadnr].Color = c;
+            quads[gquadnr].Pos = new Vector4(rect.X + rect.Width - cs, rect.Y, cs, cs);
+            quads[gquadnr].Tex = new Vector4(0.5f,0.0f,0.5f,0.5f);
+            gquadnr++;
+            
+            quads[gquadnr].Color = c;
+            quads[gquadnr].Pos = new Vector4(rect.X, rect.Y + cs, cs, rect.Height - 2 * cs);
+            quads[gquadnr].Tex = new Vector4(0.0f,0.5f,0.5f,0.0f);
+            gquadnr++;
+            
+            quads[gquadnr].Color = c;
+            quads[gquadnr].Pos = new Vector4(rect.X + cs, rect.Y + cs, rect.Width - 2 * cs, rect.Height - 2 * cs);
+            quads[gquadnr].Tex = new Vector4(0.5f,0.5f,0.0f,0.0f);
+            gquadnr++;
+            
+            quads[gquadnr].Color = c;
+            quads[gquadnr].Pos = new Vector4(rect.X + rect.Width - cs, rect.Y + cs, cs, rect.Height - 2 * cs);
+            quads[gquadnr].Tex = new Vector4(0.5f,0.5f,0.5f,0.0f);
+            gquadnr++;
+            
+            quads[gquadnr].Color = c;
+            quads[gquadnr].Pos = new Vector4(rect.X, rect.Y + rect.Height - cs, cs, cs);
+            quads[gquadnr].Tex = new Vector4(0.0f,0.5f,0.5f,0.5f);
+            gquadnr++;
+            
+            quads[gquadnr].Color = c;
+            quads[gquadnr].Pos = new Vector4(rect.X + cs, rect.Y + rect.Height - cs, rect.Width-2 * cs, cs);
+            quads[gquadnr].Tex = new Vector4(0.5f,0.5f,0.0f,0.5f);
+            gquadnr++;
+            
+            quads[gquadnr].Color = c;
+            quads[gquadnr].Pos = new Vector4(rect.X + rect.Width - cs, rect.Y + rect.Height - cs, cs, cs);
+            quads[gquadnr].Tex = new Vector4(0.5f,0.5f,0.5f,0.5f);
+            gquadnr++;
+        }
+        
         public void Render(DeviceContext context, Size size) {
             input.Update();
 
@@ -328,7 +411,7 @@ namespace SurviveCore.Gui {
     }
 
     public enum Origin {
-        TopLeft, TopRight, BottomLeft, BottomRight, Center
+        TopLeft, TopRight, BottomLeft, BottomRight, Center, CenterLeft
     }
 
     public static class TextFormat {

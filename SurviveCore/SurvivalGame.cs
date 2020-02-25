@@ -41,7 +41,7 @@ namespace SurviveCore {
         public SurvivalGame(Client c)
         {
             client = c;
-            client.OnDestroy += Dispose;
+            client.OnDispose += Dispose;
             
             
             worldrenderer = new WorldRenderer(c.Dx.Device);
@@ -155,7 +155,7 @@ namespace SurviveCore {
 
         public void Dispose()
         {
-            client.OnDestroy -= Dispose;
+            client.OnDispose -= Dispose;
             
             particlerenderer.Dispose();
             worldrenderer.Dispose();
