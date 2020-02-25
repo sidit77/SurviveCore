@@ -20,6 +20,8 @@ namespace SurviveCore {
         private readonly DepthStencilState depthstate;
         private readonly RasterizerState raststate;
         private readonly Vector3[] vertices;
+
+        public SectionRendererInfo Info;
         
         public SelectionRenderer(Device device) {
 
@@ -79,9 +81,19 @@ namespace SurviveCore {
                 FillMode = FillMode.Solid
             });
             vertexBufferBinding = new VertexBufferBinding(instancebuffer, Marshal.SizeOf<Vector3>(), 0);
+            
+            Info = new SectionRendererInfo()
+            {
+                Enabled = false
+            };
         }
         
-        public void Render(DeviceContext context, Vector3 pos, Vector3 normal, Camera camera) {
+        public void Render(DeviceContext context, Camera camera) {
+            if(!Info.Enabled)
+                return;
+
+            Vector3 normal = Info.Normal;
+            Vector3 pos = Info.Position;
             
             Vector3 v1 = new Vector3(normal.Y, normal.Z, normal.X);
             Vector3 v2 = new Vector3(normal.Z, normal.X, normal.Y);
@@ -123,6 +135,13 @@ namespace SurviveCore {
         }
         
         
+    }
+
+    public class SectionRendererInfo
+    {
+        public bool Enabled;
+        public Vector3 Position;
+        public Vector3 Normal;
     }
     
 }

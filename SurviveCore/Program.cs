@@ -16,12 +16,33 @@ namespace SurviveCore {
         [STAThread]
         private static void Main(string[] args) {
 
+            /**
+            EventBasedNetListener listener = new EventBasedNetListener();
+            NetManager client = new NetManager(listener);
+            client.Start();
+            client.Connect("localhost" , 9050, "SomeConnectionKey");
+            listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod) =>
+            {
+                Console.WriteLine("We got: {0}", dataReader.GetString(100));
+                dataReader.Recycle();
+            };
+            
+            while (!Console.KeyAvailable)
+            {
+                client.PollEvents();
+                Thread.Sleep(15);
+            }
+            
+            client.Stop();
+            **/
+            
             Console.WriteLine("Vector hardware acceleration: " + Vector.IsHardwareAccelerated);
             Thread.CurrentThread.Priority = ThreadPriority.Highest;
             try {
                 ApplicationHelpers.SetupDefaultExceptionHandlers();
 
-                using (var win = Window.Create<SurvivalGame>(text: "Hello", width: 1280, height: 720)) {
+                using (var win = Window.Create<Client>(text: "Hello", width: 1280, height: 720)) {
+                    win.CurrentScene = new SurvivalGame();
                     win.CenterToScreen();
                     win.Show();
             
@@ -67,7 +88,7 @@ namespace SurviveCore {
                 MessageBoxHelpers.Show(ex.Message);
                 Console.WriteLine(ex);
             }
-            
+            ///**/
         }
 
     }

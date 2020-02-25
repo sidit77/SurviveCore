@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -23,6 +25,7 @@ namespace SurviveCore.Particles {
         private readonly BlendState blendstate;
         private readonly DepthStencilState depthstate;
 
+        private readonly List<Particle> particles;
 
         public ParticleRenderer(Device device) {
             byte[] vscode = File.ReadAllBytes("Assets/Shader/Particle.vs.fxo");
@@ -79,9 +82,23 @@ namespace SurviveCore.Particles {
             });
             
             vertexBufferBinding = new VertexBufferBinding(instancebuffer, Marshal.SizeOf<Particle>(), 0);
+            
+            particles = new List<Particle>();
+        }
+
+        public void AddParticle(Vector3 position, float radius, Color color)
+        {
+            particles.Add(new Particle(position, radius, (uint)color.ToRgba()));
+        }
+
+        public void Clear()
+        {
+            particles.Clear();
         }
         
-        public void Render(DeviceContext context, Particle[] particles, Camera camera) {
+        public void Render(DeviceContext context, Camera camera) {
+            if(particles.Count <= 0)
+                return;
             DepthStencilState state = context.OutputMerger.DepthStencilState;
             context.InputAssembler.InputLayout = layout;
             context.InputAssembler.PrimitiveTopology = PrimitiveTopology.PointList;
@@ -92,14 +109,14 @@ namespace SurviveCore.Particles {
             context.GeometryShader.Set(gs);
             context.OutputMerger.BlendState = blendstate;
             context.OutputMerger.DepthStencilState = depthstate;
-            context.MapAndUpdate(particles, instancebuffer);
+            context.MapAndUpdate(particles.ToArray(), instancebuffer);
             ParticleConstantBuffer buffer = new ParticleConstantBuffer() {
                 ViewProjection = camera.CameraMatrix,
                 Right = camera.Right,
                 Up = camera.Up
             };
             context.MapAndUpdate(ref buffer, constantbuffer);
-            context.Draw(particles.Length,0);
+            context.Draw(particles.Count,0);
             context.OutputMerger.BlendState = null;
             context.OutputMerger.DepthStencilState = state;
             context.GeometryShader.Set(null);

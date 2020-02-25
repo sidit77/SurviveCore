@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
     <StartupObject>SurviveCore.Program</StartupObject>
     <OutputTypeEx>exe</OutputTypeEx>
     <LangVersion>7.2</LangVersion>
@@ -25,5 +25,8 @@
     <PackageReference Include="WinApi" Version="4.0.0" />
     <PackageReference Include="WinApi.Desktop" Version="4.0.0" />
     <PackageReference Include="WinApi.Windows.Controls" Version="4.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SurviveCoreServer\SurviveCoreServer.csproj" />
   </ItemGroup>
 </Project>

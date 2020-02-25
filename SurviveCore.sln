@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SurviveCore", "SurviveCore\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssetBuilder", "AssetBuilder\AssetBuilder.csproj", "{9F04CF11-12E5-4924-A9AF-9B1690C9D679}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurviveCoreServer", "SurviveCoreServer\SurviveCoreServer.csproj", "{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,6 +44,18 @@ Global
 		{9F04CF11-12E5-4924-A9AF-9B1690C9D679}.Release|x64.Build.0 = Release|Any CPU
 		{9F04CF11-12E5-4924-A9AF-9B1690C9D679}.Release|x86.ActiveCfg = Release|Any CPU
 		{9F04CF11-12E5-4924-A9AF-9B1690C9D679}.Release|x86.Build.0 = Release|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Debug|x64.Build.0 = Debug|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Debug|x86.Build.0 = Debug|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Release|x64.ActiveCfg = Release|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Release|x64.Build.0 = Release|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Release|x86.ActiveCfg = Release|Any CPU
+		{70B86DF7-BA06-415F-8B96-6D5217BA6D8E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
