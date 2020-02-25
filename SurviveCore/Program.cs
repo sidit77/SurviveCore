@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Threading;
 using SurviveCore.DirectX;
+using SurviveCore.Gui.Scene;
 using WinApi.Desktop;
 using WinApi.User32;
 using WinApi.Windows;
@@ -42,7 +43,6 @@ namespace SurviveCore {
                 ApplicationHelpers.SetupDefaultExceptionHandlers();
 
                 using (var win = Window.Create<Client>(text: "Hello", width: 1280, height: 720)) {
-                    win.CurrentScene = new SurvivalGame();
                     win.CenterToScreen();
                     win.Show();
             
@@ -55,6 +55,8 @@ namespace SurviveCore {
                     InputManager inputManager = new InputManager(win);
                     InputManager.InputState renderinput = new InputManager.InputState(inputManager);
                     InputManager.InputState updateinput = new InputManager.InputState(inputManager);
+                    win.Update(updateinput);
+                    win.CurrentScene = new MainMenuScene();
                     
                     Message msg = new Message();
                     while (msg.Value != (uint)WM.QUIT) {

@@ -10,8 +10,6 @@ using SurviveCore.Gui.Text;
 using WinApi.User32;
 using Buffer = SharpDX.Direct3D11.Buffer;
 using Device = SharpDX.Direct3D11.Device;
-using Point = System.Drawing.Point;
-using Rectangle = System.Drawing.Rectangle;
 using Size = NetCoreEx.Geometry.Size;
 
 namespace SurviveCore.Gui {
@@ -39,9 +37,7 @@ namespace SurviveCore.Gui {
         private readonly Quad[] quads;
         private int gquadnr;
         private int tquadnr;
-        
-        public Size ScreenSize { get; private set; }
-        
+
         public GuiRenderer(Device device) {
             guitexture = DDSLoader.LoadDDS(device, "./Assets/Textures/Gui.dds");
             font = new Font(device, "./Assets/Gui/Fonts/Abel.fnt");
@@ -116,11 +112,10 @@ namespace SurviveCore.Gui {
             vertexBufferBinding1 = new VertexBufferBinding(instancebuffer, Marshal.SizeOf<Quad>(), 0);
         }
 
-        public void Begin(InputManager.InputState inputState, Size size) {
+        public void Begin(InputManager.InputState inputState) {
             gquadnr = 0;
             tquadnr = 0;
             input = inputState;
-            ScreenSize = size;
         }
         
         public void Text(Point p, string text, Origin origin = Origin.TopLeft, int size = 20) {
@@ -286,7 +281,7 @@ namespace SurviveCore.Gui {
             return hovering && input.IsKeyDown(VirtualKey.LBUTTON);
         }
         
-        public void Render(DeviceContext context) {
+        public void Render(DeviceContext context, Size size) {
             input.Update();
 
             DepthStencilState state = context.OutputMerger.DepthStencilState;
@@ -301,7 +296,7 @@ namespace SurviveCore.Gui {
             context.OutputMerger.BlendState = blendstate;
             context.OutputMerger.DepthStencilState = depthstate;
             context.MapAndUpdate(quads, instancebuffer);
-            Matrix4x4 mvp = Matrix4x4.CreateOrthographicOffCenter(0,ScreenSize.Width, ScreenSize.Height, 0, -1, 1);
+            Matrix4x4 mvp = Matrix4x4.CreateOrthographicOffCenter(0,size.Width, size.Height, 0, -1, 1);
             context.MapAndUpdate(ref mvp, constantbuffer);
             context.DrawInstanced(6,gquadnr,0,0);
             context.PixelShader.SetShaderResource(0,font.Texture);

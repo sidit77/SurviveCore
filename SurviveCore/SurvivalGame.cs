@@ -1,17 +1,21 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
 using SurviveCore.DirectX;
-using SurviveCore.Gui;
+using SurviveCore.Particles;
 using SurviveCore.Physics;
 using SurviveCore.World;
+using SurviveCore.World.Rendering;
 using SurviveCore.World.Saving;
 using WinApi.User32;
 
 namespace SurviveCore {
 
-    public class SurvivalGame : IScene {
+    public class SurvivalGame : IDisposable {
+
+        private WorldRenderer worldrenderer;
+        private ParticleRenderer particlerenderer;
+        private SelectionRenderer selectionrenderer;
         
         private BlockWorld world;
         private PhysicsWorld physics;
@@ -19,6 +23,7 @@ namespace SurviveCore {
 
         private readonly Block[] inventory = { Blocks.Bricks, Blocks.Stone, Blocks.Grass, Blocks.Dirt, Blocks.Sand, Blocks.Wood, Blocks.Leaves };
         private int slot;
+        public Block SelectedBlock => inventory[slot];
 
         private float veloctiy;
         private Vector3 lastMovement;
@@ -26,165 +31,141 @@ namespace SurviveCore {
         private SectionRendererInfo info;
      
         private Camera camera;
-        private Action<Vector3, float, Color> spawnParticle;
-        private Action clearParticles;
+
+        private Client client;
+
+        public string DebugText =>
+            $"Pos: [{(int) MathF.Round(camera.Position.X)}|{(int) MathF.Round(camera.Position.Y)}|{(int) MathF.Round(camera.Position.Z)}]\n" +
+            world.DebugText;
         
-        public void OnActivate(Client client)
+        public SurvivalGame(Client c)
         {
-            camera = client.camera;
-            savegame = new WorldSave(client.WorldRenderer, "Test");
+            client = c;
+            client.OnDestroy += Dispose;
+            
+            
+            worldrenderer = new WorldRenderer(c.Dx.Device);
+            particlerenderer = new ParticleRenderer(c.Dx.Device);
+            selectionrenderer = new SelectionRenderer(c.Dx.Device);
+            savegame = new WorldSave(worldrenderer, "Test");
             world = savegame.GetWorld();
             physics = new PhysicsWorld(world);
             savegame.GetPlayerData("default", out Vector3 pos, out Quaternion rot);
-            camera.Position = pos;
-            camera.Rotation = rot;
-
-            spawnParticle = client.ParticleRenderer.AddParticle;
-            clearParticles = client.ParticleRenderer.Clear;
-
-            info = client.SelectionRenderer.Info;
-        }
-
-        private readonly Stopwatch fpstimer = Stopwatch.StartNew();
-        private long fps;
-        private int cfps = 1;
-        public void OnGui(InputManager.InputState input, GuiRenderer gui)
-        {
-            if (fpstimer.ElapsedMilliseconds >= 130) {
-                fps = (Stopwatch.Frequency / (fpstimer.ElapsedTicks / cfps));
-                cfps = 0;
-                fpstimer.Restart();
-            }
-            cfps++;
+            camera = new Camera(75f * (float) Math.PI / 180, (float) c.ScreenSize.Width / c.ScreenSize.Height,
+                0.3f, 620.0f) {Position = pos, Rotation = rot};
             
-            if(input.MouseCaptured) {
-                gui.Text(new Point(5,5), "Block: " + TextFormat.LightPink + inventory[slot].Name, size:30);
-                gui.Text(new Point(gui.ScreenSize.Width/2, gui.ScreenSize.Height/2), "+", size:25, origin:Origin.Center);
-                if (Settings.Instance.DebugInfo)
-                    gui.Text(new Point(gui.ScreenSize.Width-200, 5), 
-                        "FPS: " + fps + "\n" + 
-                        "Pos: " + String.Format("[{0}|{1}|{2}]", (int)MathF.Round(camera.Position.X),(int)MathF.Round(camera.Position.Y),(int)MathF.Round(camera.Position.Z)) + "\n" +  
-                        world.DebugText);
-            } else {
-                int w = gui.ScreenSize.Width  / 2 - 150;
-                int h = gui.ScreenSize.Height / 2 - 200;
-                if(gui.Button(new Rectangle(w - 180, h +   0, 300, 90), "Wireframe " + (Settings.Instance.Wireframe ? "on" : "off")))
-                    Settings.Instance.ToggleWireframe();
-                if(gui.Button(new Rectangle(w - 180, h + 100, 300, 90), "Ambient Occlusion " + (Settings.Instance.AmbientOcclusion ? "on" : "off")))
-                    Settings.Instance.ToggleAmbientOcclusion();
-                if(gui.Button(new Rectangle(w - 180, h + 200, 300, 90), "Fog " + (Settings.Instance.Fog ? "on" : "off")))
-                    Settings.Instance.ToggleFog();
-                if(gui.Button(new Rectangle(w - 180, h + 300, 300, 90), "Physics " + (Settings.Instance.Physics ? "on" : "off")))
-                    Settings.Instance.TogglePhysics();
-                
-                if(gui.Button(new Rectangle(w + 180, h +  0, 300, 90), "Debug info " + (Settings.Instance.DebugInfo ? "on" : "off")))
-                    Settings.Instance.ToggleDebugInfo();
-                if(gui.Button(new Rectangle(w + 180, h + 100, 300, 90), "Camera updates " + (Settings.Instance.UpdateCamera ? "on" : "off")))
-                    Settings.Instance.ToggleUpdateCamera();
-                if(gui.Button(new Rectangle(w + 180, h + 200, 300, 90), "VSync " + (Settings.Instance.VSync ? "on" : "off")))
-                    Settings.Instance.ToggleVSync();
-                if(gui.Button(new Rectangle(w + 180, h + 300, 300, 90), "Fullscreen " + (Settings.Instance.Fullscreen ? "on" : "off")))
-                    Settings.Instance.ToggleFullscreen();
-            }
+            info = selectionrenderer.Info;
+        }
+       
+        
+        public void Render()
+        {
+            if(Settings.Instance.UpdateCamera)
+                world.Update(camera.Position);
+            
+            camera.Aspect = (float)client.ScreenSize.Width / client.ScreenSize.Height;
+            camera.Update(Settings.Instance.UpdateCamera);
+            
+            client.Dx.Context.Rasterizer.State = Settings.Instance.Wireframe ? client.WireframeRenderState : client.DefaultRenderState;
+            worldrenderer.Draw(client.Dx.Context, camera);
+            client.Dx.Context.Rasterizer.State = client.DefaultRenderState;
+            
+            particlerenderer.Render(client.Dx.Context, camera);
+            selectionrenderer.Render(client.Dx.Context, camera);
         }
 
-        public void OnUpdate(InputManager.InputState input)
+        public void Update(InputManager.InputState input)
         {
-            if (input.IsForeground)
+            if (input.IsKeyDown(VirtualKey.F1))
+                camera.Rotation = Quaternion.Identity;
+            Vector3 movement = Vector3.Zero;
+            if (input.IsKey(VirtualKey.W))
+                movement += camera.Forward;
+            if (input.IsKey(VirtualKey.S))
+                movement += camera.Back;
+            if (input.IsKey(VirtualKey.A))
+                movement += camera.Left;
+            if (input.IsKey(VirtualKey.D))
+                movement += camera.Right;
+            movement.Y = 0;
+            movement = movement.LengthSquared() > 0 ? Vector3.Normalize(movement) : Vector3.Zero;
+            //TODO Investigate the glitch up instead of jump problem
+
+            if (Settings.Instance.Physics)
             {
-                if (input.IsKeyDown(VirtualKey.F1))
-                    camera.Rotation = Quaternion.Identity;
-                if (input.IsKeyDown(VirtualKey.ESCAPE))
-                    input.MouseCaptured = !input.MouseCaptured;
-                Vector3 movement = Vector3.Zero;
-                if (input.IsKey(VirtualKey.W))
-                    movement += camera.Forward;
-                if (input.IsKey(VirtualKey.S))
-                    movement += camera.Back;
-                if (input.IsKey(VirtualKey.A))
-                    movement += camera.Left;
-                if (input.IsKey(VirtualKey.D))
-                    movement += camera.Right;
-                movement.Y = 0;
-                movement = movement.LengthSquared() > 0 ? Vector3.Normalize(movement) : Vector3.Zero;
-                //TODO Investigate the glitch up instead of jump problem
-
-                if (Settings.Instance.Physics)
-                {
-                    //TODO fix the stuttering (Mouse precision?)
-                    movement *= input.IsKey(VirtualKey.SHIFT) ? 0.06f : 0.03f;
-                    veloctiy -= 0.0010f;
-                    if (physics.IsGrounded(camera.Position))
-                        veloctiy = input.IsKeyDown(VirtualKey.SPACE) ? 0.055f : 0;
-                    movement = Vector3.Lerp(lastMovement, movement, 0.05f);
-                    movement.Y += veloctiy;
-                    movement = physics.ClampToWorld(camera.Position, movement);
-                    lastMovement = movement * new Vector3(1, 0, 1);
-                    camera.Position += movement;
-                }
-                else
-                {
-                    if (input.IsKey(VirtualKey.SPACE))
-                        movement += Vector3.UnitY;
-                    if (input.IsKey(VirtualKey.SHIFT))
-                        movement -= Vector3.UnitY;
-                    movement *= input.IsKey(VirtualKey.CONTROL) ? 0.3f : 0.06f;
-                    camera.Position += lastMovement = Vector3.Lerp(lastMovement, movement, 0.03f);
-                }
-
-                info.Enabled = FindIntersection(out info.Position, out info.Normal);
-                if (input.MouseCaptured)
-                {
-                    var mpos = input.DeltaMousePosition;
-                    camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (1f / 600) * mpos.X);
-
-                    const float anglediff = 0.001f;
-                    float angle = MathF.Acos(Vector3.Dot(camera.Forward, Vector3.UnitY));
-                    camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right,
-                        MathHelper.Clamp((1f / 600) * mpos.Y + angle, anglediff, MathF.PI - anglediff) - angle);
-
-                    if (input.IsKeyDown(VirtualKey.LBUTTON) || input.IsKeyDown(VirtualKey.Q))
-                    {
-                        if (info.Enabled && world.SetBlock(info.Position, Blocks.Air))
-                        {
-                        }
-                    }
-
-                    if (input.IsKeyDown(VirtualKey.RBUTTON) || input.IsKeyDown(VirtualKey.E))
-                    {
-                        if (info.Enabled
-                            && world.GetBlock(info.Position + info.Normal) == Blocks.Air
-                            && world.SetBlock(info.Position + info.Normal, inventory[slot])
-                            && !physics.CanMoveTo(camera.Position))
-                        {
-                            world.SetBlock(info.Position + info.Normal, Blocks.Air);
-                        }
-                    }
-
-                    if (info.Enabled && input.IsKeyDown(VirtualKey.MBUTTON))
-                    {
-                        Console.WriteLine(world.GetChunk(ChunkLocation.FromPos(info.Position))?.GenerationLevel);
-                    }
-                }
-
+                //TODO fix the stuttering (Mouse precision?)
+                movement *= input.IsKey(VirtualKey.SHIFT) ? 0.06f : 0.03f;
+                veloctiy -= 0.0010f;
+                if (physics.IsGrounded(camera.Position))
+                    veloctiy = input.IsKeyDown(VirtualKey.SPACE) ? 0.055f : 0;
+                movement = Vector3.Lerp(lastMovement, movement, 0.05f);
+                movement.Y += veloctiy;
+                movement = physics.ClampToWorld(camera.Position, movement);
+                lastMovement = movement * new Vector3(1, 0, 1);
+                camera.Position += movement;
             }
+            else
+            {
+                if (input.IsKey(VirtualKey.SPACE))
+                    movement += Vector3.UnitY;
+                if (input.IsKey(VirtualKey.SHIFT))
+                    movement -= Vector3.UnitY;
+                movement *= input.IsKey(VirtualKey.CONTROL) ? 0.3f : 0.06f;
+                camera.Position += lastMovement = Vector3.Lerp(lastMovement, movement, 0.03f);
+            }
+
+            info.Enabled = FindIntersection(out info.Position, out info.Normal);
+            if (input.MouseCaptured)
+            {
+                var mpos = input.DeltaMousePosition;
+                camera.Rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, (1f / 600) * mpos.X);
+
+                const float anglediff = 0.001f;
+                float angle = MathF.Acos(Vector3.Dot(camera.Forward, Vector3.UnitY));
+                camera.Rotation *= Quaternion.CreateFromAxisAngle(camera.Right,
+                    MathHelper.Clamp((1f / 600) * mpos.Y + angle, anglediff, MathF.PI - anglediff) - angle);
+
+                if (input.IsKeyDown(VirtualKey.LBUTTON) || input.IsKeyDown(VirtualKey.Q))
+                {
+                    if (info.Enabled && world.SetBlock(info.Position, Blocks.Air))
+                    {
+                    }
+                }
+
+                if (input.IsKeyDown(VirtualKey.RBUTTON) || input.IsKeyDown(VirtualKey.E))
+                {
+                    if (info.Enabled
+                        && world.GetBlock(info.Position + info.Normal) == Blocks.Air
+                        && world.SetBlock(info.Position + info.Normal, inventory[slot])
+                        && !physics.CanMoveTo(camera.Position))
+                    {
+                        world.SetBlock(info.Position + info.Normal, Blocks.Air);
+                    }
+                }
+
+                if (info.Enabled && input.IsKeyDown(VirtualKey.MBUTTON))
+                {
+                    Console.WriteLine(world.GetChunk(ChunkLocation.FromPos(info.Position))?.GenerationLevel);
+                }
+            }
+
 
             slot = Math.Abs(input.MouseWheel / 120) % inventory.Length;
         }
 
-        public void OnRenderUpdate(InputManager.InputState input)
+        public void Dispose()
         {
-            if(Settings.Instance.UpdateCamera)
-                world.Update(camera.Position);
-        }
-
-        public void OnDeactivate()
-        {
+            client.OnDestroy -= Dispose;
+            
+            particlerenderer.Dispose();
+            worldrenderer.Dispose();
+            selectionrenderer.Dispose();
             world.Dispose();
             savegame.SavePlayerData("default", camera.Position, camera.Rotation);
             savegame.Dispose();
+            Console.WriteLine("Dispose");
         }
-        
+
         
         
         
@@ -195,7 +176,7 @@ namespace SurviveCore {
             for(int i = 0; i < 6; i++) {
                 if (!RayFaceIntersection(&forward.X, &position.X, &pos.X, i, out float d)) continue;
                 if(User32Methods.GetKeyState(VirtualKey.T).IsPressed)
-                    spawnParticle(position + forward * d, 0.04f, Color.Red);
+                    particlerenderer.AddParticle(position + forward * d, 0.04f, Color.Red);
                 fixed(float* n = &hitnormal.X)
                     n[i % 3] = i < 3 ? -1 : 1;
                 return true;
@@ -223,7 +204,7 @@ namespace SurviveCore {
         private bool FindIntersection(out Vector3 pos, out Vector3 normal)
         {
             if (User32Methods.GetKeyState(VirtualKey.T).IsPressed)
-                clearParticles();
+                particlerenderer.Clear();
             normal = Vector3.Zero;
             if (!Raycast(out pos))
                 return false;
@@ -242,15 +223,14 @@ namespace SurviveCore {
             Vector3 forward = camera.Forward;
             for(float f = 0; f < 7; f += 0.25f) {
                 if(User32Methods.GetKeyState(VirtualKey.T).IsPressed)
-                    spawnParticle(camera.Position + forward * f, 0.03f, Color.Aquamarine);
+                    particlerenderer.AddParticle(camera.Position + forward * f, 0.03f, Color.Aquamarine);
                 if (world.GetBlock(camera.Position + forward * f) == Blocks.Air) continue;
                 pos = camera.Position + forward * f;
                 return true;
             }
             return false;
         }
-        
-        
+
         
     }
 
