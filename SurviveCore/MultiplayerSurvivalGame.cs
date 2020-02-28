@@ -24,13 +24,13 @@ namespace SurviveCore
         private PacketProcessor packetProcessor;
         private int playerid;
 
-        private Dictionary<int, Player> players;
+        private Dictionary<int, (Player player, CSPlayerInfo info)> players;
         
         public string DebugText =>
             $"Pos: [{(int) MathF.Round(camera.Position.X)}|{(int) MathF.Round(camera.Position.Y)}|{(int) MathF.Round(camera.Position.Z)}]\n" + 
-            $"Players:\n {players.Values.Select(p => "   " + p.Name).Aggregate((i, j) => $"{i}\n{j}")}";
+            $"Players:\n {players.Values.Select(p => "   " + p.player.Name).Aggregate((i, j) => $"{i}\n{j}")}";
         
-        public MultiplayerSurvivalGame(Client c, NetManager nc, EventBasedNetListener ebnl, int pid, Dictionary<int, Player> p)
+        public MultiplayerSurvivalGame(Client c, NetManager nc, EventBasedNetListener ebnl, int pid, Dictionary<int, (Player, CSPlayerInfo)> p)
         {
             client = c;
             client.OnDispose += Dispose;
@@ -43,13 +43,13 @@ namespace SurviveCore
             packetProcessor = new PacketProcessor();
             ebnl.NetworkReceiveEvent += packetProcessor.ReadAllPackets;
             
-            packetProcessor.Subscribe(PacketType.PlayerJoinedEvent, (peer, reader) => players.Add(reader.GetInt(), reader.GetPlayer()));
+            packetProcessor.Subscribe(PacketType.PlayerJoinedEvent, (peer, reader) => players.Add(reader.GetInt(), (reader.GetPlayer(), new CSPlayerInfo())));
             packetProcessor.Subscribe(PacketType.PlayerLeftEvent, (peer, reader) => players.Remove(reader.GetInt()));
             packetProcessor.Subscribe(PacketType.PositionDistribution, (peer, reader) =>
             {
                 int count = reader.GetInt();
                 while (count-- > 0)
-                    players[reader.GetInt()].Position = reader.GetVector3();
+                    players[reader.GetInt()].player.Position = reader.GetVector3();
             });
             
             particlerenderer = new ParticleRenderer(c.Dx.Device);
@@ -73,8 +73,12 @@ namespace SurviveCore
             camera.Update(Settings.Instance.UpdateCamera);
 
             particlerenderer.Clear();
-            foreach (var p in players.Where(p => p.Key != playerid).Select(p => p.Value.Position))
-                particlerenderer.AddParticle(p, 2.0f, Color.Indigo);
+            foreach (var (p, i) in players.Where(p => p.Key != playerid).Select(kv => kv.Value))
+            {
+                i.RenderPosition = Vector3.Lerp(i.RenderPosition, p.Position, 0.3f);
+                particlerenderer.AddParticle(i.RenderPosition, 2.0f, Color.Indigo);
+            }
+                
             Random r = new Random(345);
             for (int i = 0; i < 1000; i++)
                 particlerenderer.AddParticle(new Vector3(r.NextFloat(-100, 100),r.NextFloat(0, 100),r.NextFloat(-100, 100)), 0.3f, Color.Coral);
@@ -127,5 +131,9 @@ namespace SurviveCore
             particlerenderer?.Dispose();
             Console.WriteLine("Dispose");
         }
+    }
+    public class CSPlayerInfo
+    {
+        public Vector3 RenderPosition;
     }
 }

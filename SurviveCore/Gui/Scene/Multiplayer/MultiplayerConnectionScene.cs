@@ -42,9 +42,9 @@ namespace SurviveCore.Gui.Scene.Multiplayer
             {
                 int pid = reader.GetInt();
                 int playercount = reader.GetInt();
-                Dictionary<int, Player> players = new Dictionary<int, Player>();
+                Dictionary<int, (Player, CSPlayerInfo)> players = new Dictionary<int, (Player, CSPlayerInfo)>();
                 while (playercount-- > 0)
-                    players.Add(reader.GetInt(), reader.GetPlayer());
+                    players.Add(reader.GetInt(), (reader.GetPlayer(), new CSPlayerInfo()));
                 
                 listener.ClearNetworkErrorEvent();
                 listener.ClearPeerConnectedEvent();
