@@ -18,6 +18,7 @@ namespace SurviveCore
         private const int maxplayers = 10;
 
         private NetManager server;
+        private PacketProcessor packetProcessor;
         private Dictionary<int, (NetPeer peer, Player data)> clients;
         
         
@@ -30,7 +31,7 @@ namespace SurviveCore
             server = new NetManager(listener);
             
 
-            PacketProcessor packetProcessor = new PacketProcessor();
+            packetProcessor = new PacketProcessor();
 
             listener.NetworkReceiveEvent += packetProcessor.ReadAllPackets;
             
@@ -83,6 +84,8 @@ namespace SurviveCore
                 
             });
             
+            packetProcessor.Subscribe(PacketType.PositionUpdate, (peer, reader) => clients[peer.Id].data.Position = reader.GetVector3());
+            
             listener.PeerDisconnectedEvent += (peer, info) =>
             {
                 if (clients.ContainsKey(peer.Id))
@@ -104,6 +107,15 @@ namespace SurviveCore
             while (!Console.KeyAvailable)
             {
                 server.PollEvents();
+                packetProcessor.Send(server, PacketType.PositionDistribution, writer =>
+                {
+                    writer.Put(clients.Count);
+                    foreach (var c in clients)
+                    {
+                        writer.Put(c.Key);
+                        writer.Put(c.Value.data.Position);
+                    }
+                }, DeliveryMethod.Sequenced);
                 //server.SendToAll(writer, DeliveryMethod.ReliableOrdered);
                 Thread.Sleep(15);
             }

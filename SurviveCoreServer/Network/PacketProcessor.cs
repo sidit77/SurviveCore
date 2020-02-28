@@ -29,7 +29,8 @@ namespace SurviveCore.Network
         private void ReadPacket(NetPeer peer, NetPacketReader reader, DeliveryMethod method)
         {
             PacketType type = (PacketType) reader.GetInt();
-            handler[type].Invoke(peer, reader);
+            if(handler.TryGetValue(type, out var action))
+                action(peer, reader);
         }
 
         public void Subscribe(PacketType type, Action<NetPeer, NetPacketReader> action)
@@ -43,6 +44,14 @@ namespace SurviveCore.Network
             writer.Put((int)type);
             action.Invoke(writer);
             peer.Send(writer, method);
+        }
+        
+        public void Send(NetManager manager, PacketType type, Action<NetDataWriter> action, DeliveryMethod method)
+        {
+            writer.Reset();
+            writer.Put((int)type);
+            action.Invoke(writer);
+            manager.SendToAll(writer, method);
         }
         
     }

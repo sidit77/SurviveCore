@@ -5,6 +5,8 @@ namespace SurviveCore.Network
         JoinRequest,
         JoinResponse,
         PlayerJoinedEvent,
-        PlayerLeftEvent
+        PlayerLeftEvent,
+        PositionUpdate,
+        PositionDistribution
     }
 }

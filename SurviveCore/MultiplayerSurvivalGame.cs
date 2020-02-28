@@ -21,6 +21,7 @@ namespace SurviveCore
 
         private Client client;
         private NetManager networkClient;
+        private PacketProcessor packetProcessor;
         private int playerid;
 
         private Dictionary<int, Player> players;
@@ -38,27 +39,31 @@ namespace SurviveCore
             playerid = pid;
             players = p;
             
-            PacketProcessor packetProcessor = new PacketProcessor();
+            packetProcessor = new PacketProcessor();
             ebnl.NetworkReceiveEvent += packetProcessor.ReadAllPackets;
             
             packetProcessor.Subscribe(PacketType.PlayerJoinedEvent, (peer, reader) => players.Add(reader.GetInt(), reader.GetPlayer()));
             packetProcessor.Subscribe(PacketType.PlayerLeftEvent, (peer, reader) => players.Remove(reader.GetInt()));
-
+            packetProcessor.Subscribe(PacketType.PositionDistribution, (peer, reader) =>
+            {
+                int count = reader.GetInt();
+                while (count-- > 0)
+                    players[reader.GetInt()].Position = reader.GetVector3();
+            });
+            
             particlerenderer = new ParticleRenderer(c.Dx.Device);
             camera = new Camera(75f * (float) Math.PI / 180, (float) c.ScreenSize.Width / c.ScreenSize.Height,
                 0.3f, 620.0f);
             
-            Random r = new Random(345);
-            for (int i = 0; i < 1000; i++)
-            {
-                particlerenderer.AddParticle(new Vector3(r.NextFloat(-100, 100),r.NextFloat(0, 100),r.NextFloat(-100, 100)), 0.3f, Color.Coral);
-            }
+           
             
         }
 
         public void Network()
         {
             networkClient.PollEvents();
+            
+            packetProcessor.Send(networkClient, PacketType.PositionUpdate, writer => writer.Put(camera.Position), DeliveryMethod.Sequenced);
         }
         
         public void Render()
@@ -66,6 +71,14 @@ namespace SurviveCore
             camera.Aspect = (float)client.ScreenSize.Width / client.ScreenSize.Height;
             camera.Update(Settings.Instance.UpdateCamera);
 
+            particlerenderer.Clear();
+            Random r = new Random(345);
+            for (int i = 0; i < 1000; i++)
+            {
+                particlerenderer.AddParticle(new Vector3(r.NextFloat(-100, 100),r.NextFloat(0, 100),r.NextFloat(-100, 100)), 0.3f, Color.Coral);
+            }
+            foreach (var p in players.Where(p => p.Key != playerid).Select(p => p.Value.Position))
+                particlerenderer.AddParticle(p, 1.0f, Color.Indigo);
             particlerenderer.Render(client.Dx.Context, camera);
         }
 
