@@ -38,6 +38,7 @@ namespace SurviveCore
             networkClient = nc;
             playerid = pid;
             players = p;
+            //players.Add(12, new Player(){Name = "Test", Position = new Vector3(10,10,10)});
             
             packetProcessor = new PacketProcessor();
             ebnl.NetworkReceiveEvent += packetProcessor.ReadAllPackets;
@@ -65,20 +66,18 @@ namespace SurviveCore
             
             packetProcessor.Send(networkClient, PacketType.PositionUpdate, writer => writer.Put(camera.Position), DeliveryMethod.Sequenced);
         }
-        
+
         public void Render()
         {
             camera.Aspect = (float)client.ScreenSize.Width / client.ScreenSize.Height;
             camera.Update(Settings.Instance.UpdateCamera);
 
             particlerenderer.Clear();
+            foreach (var p in players.Where(p => p.Key != playerid).Select(p => p.Value.Position))
+                particlerenderer.AddParticle(p, 2.0f, Color.Indigo);
             Random r = new Random(345);
             for (int i = 0; i < 1000; i++)
-            {
                 particlerenderer.AddParticle(new Vector3(r.NextFloat(-100, 100),r.NextFloat(0, 100),r.NextFloat(-100, 100)), 0.3f, Color.Coral);
-            }
-            foreach (var p in players.Where(p => p.Key != playerid).Select(p => p.Value.Position))
-                particlerenderer.AddParticle(p, 1.0f, Color.Indigo);
             particlerenderer.Render(client.Dx.Context, camera);
         }
 

@@ -100,15 +100,15 @@ namespace SurviveCore.DirectX {
             }
 
             public bool IsKey(VirtualKey key) {
-                return User32Methods.GetKeyState(key).IsPressed;
+                return IsForeground && User32Methods.GetKeyState(key).IsPressed;
             }
             
             public bool IsKeyDown(VirtualKey key) {
-                return User32Methods.GetKeyState(key).IsPressed && !lastkeystate[key];
+                return IsForeground && User32Methods.GetKeyState(key).IsPressed && !lastkeystate[key];
             }
             
             public bool IsKeyUp(VirtualKey key) {
-                return !User32Methods.GetKeyState(key).IsPressed && lastkeystate[key];
+                return IsForeground && !User32Methods.GetKeyState(key).IsPressed && lastkeystate[key];
             }
 
             public string GetText()

@@ -28,9 +28,20 @@ namespace SurviveCore.Network
 
         private void ReadPacket(NetPeer peer, NetPacketReader reader, DeliveryMethod method)
         {
+            int startsize = reader.AvailableBytes;
+            int length = reader.GetInt();
             PacketType type = (PacketType) reader.GetInt();
-            if(handler.TryGetValue(type, out var action))
+            if (handler.TryGetValue(type, out var action))
+            {
                 action(peer, reader);
+                if(reader.AvailableBytes != startsize - length)
+                    throw new ParseException($"A {type} packet was not fully consumed!");
+            }
+            else
+            {
+                while (reader.AvailableBytes > startsize - length)
+                    reader.GetByte();
+            }
         }
 
         public void Subscribe(PacketType type, Action<NetPeer, NetPacketReader> action)
@@ -41,16 +52,20 @@ namespace SurviveCore.Network
         public void Send(NetPeer peer, PacketType type, Action<NetDataWriter> action, DeliveryMethod method)
         {
             writer.Reset();
+            writer.Put(0);
             writer.Put((int)type);
             action.Invoke(writer);
+            FastBitConverter.GetBytes(writer.Data, 0, writer.Length);
             peer.Send(writer, method);
         }
         
         public void Send(NetManager manager, PacketType type, Action<NetDataWriter> action, DeliveryMethod method)
         {
             writer.Reset();
+            writer.Put(0);
             writer.Put((int)type);
             action.Invoke(writer);
+            FastBitConverter.GetBytes(writer.Data, 0, writer.Length);
             manager.SendToAll(writer, method);
         }
         
