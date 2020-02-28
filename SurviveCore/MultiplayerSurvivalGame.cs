@@ -55,7 +55,11 @@ namespace SurviveCore
             }
             
         }
-       
+
+        public void Network()
+        {
+            networkClient.PollEvents();
+        }
         
         public void Render()
         {
@@ -67,9 +71,6 @@ namespace SurviveCore
 
         public void Update(InputManager.InputState input)
         {
-            
-            networkClient.PollEvents();
-            
             
             Vector3 movement = Vector3.Zero;
             if (input.IsKey(VirtualKey.W))

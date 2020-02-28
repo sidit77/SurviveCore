@@ -29,7 +29,7 @@ namespace SurviveCore.Gui.Scene
                 client.CurrentScene = previous;
         }
 
-        public override void OnUpdate(InputManager.InputState input)
+        public override void OnPhysicsUpdate(InputManager.InputState input)
         {
             t += 0.01f;
         }

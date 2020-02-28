@@ -88,7 +88,12 @@ namespace SurviveCore
         public void Update(InputManager.InputState input)
         {
             Input = input;
-            CurrentScene?.OnUpdate(input);
+            CurrentScene?.OnPhysicsUpdate(input);
+        }
+
+        public void Network()
+        {
+            CurrentScene?.OnNetworkUpdate();
         }
 
         protected override void OnSize(ref SizePacket packet) {
@@ -116,11 +121,15 @@ namespace SurviveCore
             client = c;
         }
         public abstract void OnGui(InputManager.InputState input, GuiRenderer gui);
-        public virtual void OnUpdate(InputManager.InputState input)
+        public virtual void OnPhysicsUpdate(InputManager.InputState input)
         {
             
         }
         public virtual void OnRenderUpdate(InputManager.InputState input)
+        {
+            
+        }
+        public virtual void OnNetworkUpdate()
         {
             
         }

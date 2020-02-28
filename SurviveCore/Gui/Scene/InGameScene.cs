@@ -31,9 +31,9 @@ namespace SurviveCore.Gui.Scene
                 gui.Text(new Point(client.ScreenSize.Width-200, 5), $"FPS: {client.Fps}\n" + game?.DebugText);
         }
 
-        public override void OnUpdate(InputManager.InputState input)
+        public override void OnPhysicsUpdate(InputManager.InputState input)
         {
-            base.OnUpdate(input);
+            base.OnPhysicsUpdate(input);
             if(input.IsKeyDown(VirtualKey.ESCAPE) || !input.IsForeground)
                 client.CurrentScene = new PauseScene(this);
             game.Update(input);

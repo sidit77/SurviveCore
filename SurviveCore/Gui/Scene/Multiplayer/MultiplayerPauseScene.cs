@@ -36,17 +36,24 @@ namespace SurviveCore.Gui.Scene.Multiplayer
 
         }
 
-        public override void OnUpdate(InputManager.InputState input)
+        public override void OnPhysicsUpdate(InputManager.InputState input)
         {
-            base.OnUpdate(input);
+            base.OnPhysicsUpdate(input);
             if (input.IsForeground && input.IsKeyDown(VirtualKey.ESCAPE))
                 client.CurrentScene = previous;
+            previous.GetGame().Update(input);
         }
 
         public override void OnRenderUpdate(InputManager.InputState input)
         {
             base.OnRenderUpdate(input);
             previous.GetGame().Render();
+        }
+
+        public override void OnNetworkUpdate()
+        {
+            base.OnNetworkUpdate();
+            previous.GetGame().Network();
         }
     }
 }

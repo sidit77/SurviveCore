@@ -36,9 +36,9 @@ namespace SurviveCore.Gui.Scene
                 
         }
 
-        public override void OnUpdate(InputManager.InputState input)
+        public override void OnPhysicsUpdate(InputManager.InputState input)
         {
-            base.OnUpdate(input);
+            base.OnPhysicsUpdate(input);
             if (input.IsForeground && input.IsKeyDown(VirtualKey.ESCAPE))
                 client.CurrentScene = previous;
         }

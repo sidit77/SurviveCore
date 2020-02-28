@@ -52,6 +52,9 @@ namespace SurviveCore {
                     long lastupdated = Stopwatch.GetTimestamp();
                     long updatetick = (long)(1f / 200 * Stopwatch.Frequency);
                     
+                    long lastnetwork = Stopwatch.GetTimestamp();
+                    long networktick = (long)(1f / 20 * Stopwatch.Frequency);
+                    
                     InputManager inputManager = new InputManager(win);
                     InputManager.InputState renderinput = new InputManager.InputState(inputManager);
                     InputManager.InputState updateinput = new InputManager.InputState(inputManager);
@@ -84,6 +87,10 @@ namespace SurviveCore {
                                 win.Update(updateinput);
                                 updateinput.Update();
                                 lastupdated += updatetick;
+                            }
+                            while (lastnetwork + networktick < Stopwatch.GetTimestamp()) {
+                                win.Network();
+                                lastnetwork += networktick;
                             }
                             win.Draw(renderinput);
                             win.Validate();

@@ -70,9 +70,9 @@ namespace SurviveCore.Gui.Scene.Multiplayer
             gui.Text(new Point(w, h), $"Connecting to {ip} as {name}", Origin.Center, 25);
         }
 
-        public override void OnUpdate(InputManager.InputState input)
+        public override void OnNetworkUpdate()
         {
-            base.OnUpdate(input);
+            base.OnNetworkUpdate();
             networkClient.PollEvents();
         }
     }
