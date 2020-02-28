@@ -1,4 +1,6 @@
-﻿namespace SurviveCoreServer
+﻿using SurviveCore;
+
+namespace SurviveCoreServer
 {
     static class Program
     {

@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Numerics;
+using LiteNetLib;
 using SurviveCore.DirectX;
+using SurviveCore.Network;
 using SurviveCore.Particles;
 using WinApi.User32;
 
@@ -16,15 +20,30 @@ namespace SurviveCore
         private Camera camera;
 
         private Client client;
+        private NetManager networkClient;
+        private int playerid;
 
-        public string DebugText =>
-            $"Pos: [{(int) MathF.Round(camera.Position.X)}|{(int) MathF.Round(camera.Position.Y)}|{(int) MathF.Round(camera.Position.Z)}]\n";
+        private Dictionary<int, Player> players;
         
-        public MultiplayerSurvivalGame(Client c, string ip)
+        public string DebugText =>
+            $"Pos: [{(int) MathF.Round(camera.Position.X)}|{(int) MathF.Round(camera.Position.Y)}|{(int) MathF.Round(camera.Position.Z)}]\n" + 
+            $"Players:\n {players.Values.Select(p => "   " + p.Name).Aggregate((i, j) => $"{i}\n{j}")}";
+        
+        public MultiplayerSurvivalGame(Client c, NetManager nc, EventBasedNetListener ebnl, int pid, Dictionary<int, Player> p)
         {
             client = c;
             client.OnDispose += Dispose;
+
+            networkClient = nc;
+            playerid = pid;
+            players = p;
             
+            PacketProcessor packetProcessor = new PacketProcessor();
+            ebnl.NetworkReceiveEvent += packetProcessor.ReadAllPackets;
+            
+            packetProcessor.Subscribe(PacketType.PlayerJoinedEvent, (peer, reader) => players.Add(reader.GetInt(), reader.GetPlayer()));
+            packetProcessor.Subscribe(PacketType.PlayerLeftEvent, (peer, reader) => players.Remove(reader.GetInt()));
+
             particlerenderer = new ParticleRenderer(c.Dx.Device);
             camera = new Camera(75f * (float) Math.PI / 180, (float) c.ScreenSize.Width / c.ScreenSize.Height,
                 0.3f, 620.0f);
@@ -48,6 +67,10 @@ namespace SurviveCore
 
         public void Update(InputManager.InputState input)
         {
+            
+            networkClient.PollEvents();
+            
+            
             Vector3 movement = Vector3.Zero;
             if (input.IsKey(VirtualKey.W))
                 movement += camera.Forward;
@@ -86,7 +109,9 @@ namespace SurviveCore
         {
             client.OnDispose -= Dispose;
             
-            particlerenderer.Dispose();
+            networkClient?.Stop();
+            
+            particlerenderer?.Dispose();
             Console.WriteLine("Dispose");
         }
     }
